@@ -1,13 +1,13 @@
 #![no_std]
 #![no_main]
+#![feature(asm_const)]
 
 mod lang_items;
+mod boot;
+mod console;
+mod mem;
 
-#[no_mangle]
-#[link_section = ".text.boot"]
-unsafe extern "C" fn _start() -> ! {
-    core::arch::asm!(
-        "wfi",
-        options(noreturn)
-    )
+unsafe extern "C" fn rust_entry(_hartid: usize, _dtb: usize) {
+    mem::clear_bss();
+    console::write_bytes(b"\nHello, ArceOS!\n");
 }
