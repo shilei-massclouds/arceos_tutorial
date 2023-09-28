@@ -1,18 +1,10 @@
-//! v0: first line in kernel.
+//! app:v2: just print string.
 
 #![no_std]
 #![no_main]
-#![feature(asm_const)]
 
-mod app;
-
-mod lang_items;
-mod boot;
-mod mem;
-mod console;
-
-unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
-    mem::clear_bss();
-
-    app::main(hartid, dtb);
+#[no_mangle]
+pub fn main(_hartid: usize, _dtb: usize) {
+    axhal::console::write_bytes(b"\nHello, ArceOS!\n");
 }
+
