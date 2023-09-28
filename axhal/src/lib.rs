@@ -7,6 +7,8 @@
 mod lang_items;
 mod boot;
 mod mem;
+mod paging;
+
 pub mod console;
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {

@@ -21,7 +21,7 @@ A ?= server
 APP ?= $(A)
 
 APP_NAME := $(shell basename $(APP))
-LD_SCRIPT := $(CURDIR)/linker.lds
+LD_SCRIPT := $(CURDIR)/axhal/linker.lds
 
 OUT_DIR ?= target/$(TARGET)/release
 
