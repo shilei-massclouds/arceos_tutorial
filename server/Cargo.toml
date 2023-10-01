@@ -3,6 +3,10 @@ name = "server"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["alloc"]
+alloc = ["axruntime/alloc"]
+
 [dependencies]
 axhal = { path = "../axhal" }
-axalloc = { path = "../axalloc" }
+axruntime = { path = "../axruntime" }
