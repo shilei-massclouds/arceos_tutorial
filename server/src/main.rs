@@ -3,7 +3,7 @@
 #![no_std]
 #![no_main]
 
-use axstd::{print, println, String};
+use axstd::{print, String};
 
 #[no_mangle]
 pub fn main() {

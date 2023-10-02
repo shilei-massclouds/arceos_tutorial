@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 riscv = "0.10"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
+axlog = { path = "../axlog" }

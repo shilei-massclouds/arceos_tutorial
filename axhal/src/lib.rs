@@ -4,10 +4,14 @@
 #![no_main]
 #![feature(asm_const)]
 
+#[macro_use]
+extern crate axlog;
+
 mod boot;
 mod mem;
 mod paging;
 
+pub mod misc;
 pub mod time;
 pub mod console;
 
