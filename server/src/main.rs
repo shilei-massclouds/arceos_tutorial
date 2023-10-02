@@ -3,13 +3,15 @@
 #![no_std]
 #![no_main]
 
-extern crate alloc;
-extern crate axruntime;
-
-use alloc::string::String;
+use axstd::{print, println, String};
 
 #[no_mangle]
-pub fn main(_hartid: usize, _dtb: usize) {
+pub fn main(_hartid: usize, dtb: usize) {
     let info = String::from("\nHello, ArceOS! Allocate it!\n");
-    axhal::console::write_bytes(info.as_bytes());
+    print!("{}", info);
+    println!("dtb: {:x}, kernel: {:x}", dtb, _skernel as usize);
+}
+
+extern "C" {
+    fn _skernel();
 }

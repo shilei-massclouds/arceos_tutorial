@@ -1,9 +1,15 @@
 [package]
-name = "axalloc"
+name = "axstd"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+alloc = ["axruntime/alloc"]
+
 [dependencies]
 axsync = { path = "../axsync" }
+axhal = { path = "../axhal" }
+axruntime = { path = "../axruntime" }

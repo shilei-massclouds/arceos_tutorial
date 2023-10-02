@@ -5,8 +5,7 @@ edition = "2021"
 
 [features]
 default = ["alloc"]
-alloc = ["axruntime/alloc"]
+alloc = ["axstd/alloc"]
 
 [dependencies]
-axhal = { path = "../axhal" }
-axruntime = { path = "../axruntime" }
+axstd = { path = "../axstd" }
