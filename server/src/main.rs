@@ -3,10 +3,9 @@
 #![no_std]
 #![no_main]
 
-use axstd::{print, String};
+use axstd::print;
 
 #[no_mangle]
 pub fn main() {
-    let info = String::from("\nHello, ArceOS! Allocate it!\n");
-    print!("{}", info);
+    print!("\nHello, ArceOS! Parse dtb!\n");
 }
