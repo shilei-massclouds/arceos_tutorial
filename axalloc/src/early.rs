@@ -56,8 +56,7 @@ impl EarlyByteAllocator {
         }
     }
 
-    #[allow(dead_code)]
-    fn available_bytes(&self) -> usize {
+    pub fn available_bytes(&self) -> usize {
         self.end - self.next
     }
 }

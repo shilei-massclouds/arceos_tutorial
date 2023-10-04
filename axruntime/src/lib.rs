@@ -60,6 +60,8 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         info!("\t{:#x}, size: {:#x}", r.0, r.1);
     }
 
+    info!("Heap available: {}K.", axalloc::available_bytes()/1024);
+
     unsafe {
         main();
     }
