@@ -8,8 +8,8 @@
 extern crate axlog;
 
 mod boot;
-mod paging;
 
+pub mod paging;
 pub mod mem;
 pub mod misc;
 pub mod time;

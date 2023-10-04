@@ -8,6 +8,7 @@ edition = "2021"
 [features]
 default = []
 alloc = ["axruntime/alloc"]
+paging = ["axruntime/paging"]
 
 [dependencies]
 axsync = { path = "../axsync" }

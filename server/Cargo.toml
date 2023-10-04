@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = ["alloc"]
+default = ["alloc", "paging"]
 alloc = ["axstd/alloc"]
+paging = ["axstd/paging"]
 
 [dependencies]
 axstd = { path = "../axstd" }

@@ -7,6 +7,7 @@ edition = "2021"
 
 [features]
 alloc = ["dep:axalloc"]
+paging = ["axhal/paging"]
 
 [dependencies]
 axhal = { path = "../axhal" }
@@ -14,3 +15,4 @@ axlog = { path = "../axlog" }
 axdtb = { path = "../axdtb" }
 crate_interface = { path = "../crate_interface" }
 axalloc = { path = "../axalloc", optional = true }
+axsync = { path = "../axsync" }

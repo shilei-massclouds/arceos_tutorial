@@ -11,6 +11,9 @@ use core::str;
 use alloc::string::String;
 use alloc::vec::Vec;
 use axdtb::util::SliceRead;
+use axhal::paging::PageTable;
+use axsync::BootOnceCell;
+use axhal::mem::phys_to_virt;
 
 extern "C" {
     fn _skernel();
@@ -56,8 +59,14 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
     info!("Memory: {:#x}, size: {:#x}", dtb_info.memory_addr, dtb_info.memory_size);
     info!("Virtio_mmio[{}]:", dtb_info.mmio_regions.len());
-    for r in dtb_info.mmio_regions {
+    for r in &dtb_info.mmio_regions {
         info!("\t{:#x}, size: {:#x}", r.0, r.1);
+    }
+
+    #[cfg(feature = "paging")]
+    {
+        info!("Initialize kernel page table...");
+        remap_kernel_memory(dtb_info).expect("remap kernel memoy failed");
     }
 
     info!("Heap available: {}K.", axalloc::available_bytes()/1024);
@@ -70,6 +79,48 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     axhal::misc::terminate();
 }
 
+#[cfg(feature = "paging")]
+fn remap_kernel_memory(dtb: DtbInfo) -> Result<(), axhal::paging::PagingError> {
+    use axhal::mem::{kernel_image_regions, free_regions};
+    use axhal::mem::{MemRegion, MemRegionFlags};
+
+    let mmio_regions = dtb.mmio_regions.iter().map(|reg| MemRegion {
+        paddr: reg.0.into(),
+        size: reg.1,
+        flags: MemRegionFlags::RESERVED
+            | MemRegionFlags::DEVICE
+            | MemRegionFlags::READ
+            | MemRegionFlags::WRITE,
+        name: "mmio",
+    });
+
+    let regions = kernel_image_regions()
+        .chain(free_regions(dtb.memory_size))
+        .chain(mmio_regions);
+
+    let mut kernel_page_table = PageTable::try_new()?;
+    for r in regions {
+        kernel_page_table.map_region(
+            phys_to_virt(r.paddr),
+            r.paddr,
+            r.size,
+            r.flags.into(),
+            true,
+        )?;
+    }
+
+    static KERNEL_PAGE_TABLE: BootOnceCell<PageTable> =
+        unsafe { BootOnceCell::new() };
+
+    KERNEL_PAGE_TABLE.init(kernel_page_table);
+
+    unsafe {
+        axhal::paging::write_page_table_root(KERNEL_PAGE_TABLE.get().root_paddr())
+    };
+
+    Ok(())
+}
+
 struct DtbInfo {
     memory_addr: usize,
     memory_size: usize,
@@ -77,7 +128,7 @@ struct DtbInfo {
 }
 
 fn parse_dtb(dtb_pa: axhal::mem::PhysAddr) -> axdtb::DeviceTreeResult<DtbInfo> {
-    let dtb_va = axhal::mem::phys_to_virt(dtb_pa);
+    let dtb_va = phys_to_virt(dtb_pa);
     debug!("dtb: {:#x} => {:#x}", dtb_pa, dtb_va);
 
     let mut memory_addr = 0;

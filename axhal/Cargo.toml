@@ -3,8 +3,15 @@ name = "axhal"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+paging = ["dep:page_table", "dep:page_table_entry"]
+
 [dependencies]
 riscv = "0.10"
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
 axlog = { path = "../axlog" }
 memory_addr = { path = "../memory_addr" }
+bitflags = "2.2"
+page_table = { path = "../page_table", optional = true }
+page_table_entry = { path = "../page_table_entry", optional = true }
