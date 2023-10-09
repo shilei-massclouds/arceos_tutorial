@@ -2,22 +2,23 @@
 
 #![no_std]
 
-mod early;
-
+use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
-use crate::early::EarlyByteAllocator;
+use allocator::{BaseAllocator, ByteAllocator, EarlyAllocator};
 
 use axsync::BootCell;
 
+extern crate alloc;
+
 struct GlobalAllocator {
-    early_alloc: BootCell<EarlyByteAllocator>,
+    early_alloc: BootCell<EarlyAllocator>,
 }
 
 impl GlobalAllocator {
     pub const fn new() -> Self {
         Self {
             early_alloc: unsafe {
-                BootCell::new(EarlyByteAllocator::new())
+                BootCell::new(EarlyAllocator::new())
             },
         }
     }
@@ -33,11 +34,18 @@ impl GlobalAllocator {
 
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.early_alloc.exclusive_access().alloc(layout)
+        if let Ok(ptr) = self.early_alloc.exclusive_access().alloc(layout) {
+            ptr.as_ptr()
+        } else {
+            alloc::alloc::handle_alloc_error(layout)
+        }
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.early_alloc.exclusive_access().dealloc(ptr, layout)
+        self.early_alloc.exclusive_access().dealloc(
+            NonNull::new(ptr).expect("dealloc null ptr"),
+            layout
+        )
     }
 }
 
