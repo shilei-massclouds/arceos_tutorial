@@ -7,5 +7,5 @@ use axstd::print;
 
 #[no_mangle]
 pub fn main() {
-    print!("\nHello, ArceOS! Parse dtb!\n");
+    print!("\nHello, ArceOS! Final init allocator!\n");
 }

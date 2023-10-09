@@ -48,7 +48,7 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         // For Riscv64 memory layout, we reserve 2M memory space for SBI.
         // Now SBI just occupies about 194K, so reserve 1M for it and
         // requisition another 1M for early heap.
-        axalloc::global_init(_skernel as usize - 0x100000, 0x100000);
+        axalloc::early_init(_skernel as usize - 0x100000, 0x100000);
     }
 
     // Parse fdt for early memory info
@@ -66,10 +66,15 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     #[cfg(feature = "paging")]
     {
         info!("Initialize kernel page table...");
-        remap_kernel_memory(dtb_info).expect("remap kernel memoy failed");
+        remap_kernel_memory(&dtb_info).expect("remap kernel memoy failed");
     }
 
     info!("Heap available: {}K.", axalloc::available_bytes()/1024);
+
+    #[cfg(feature = "alloc")]
+    {
+        allocator_final_init(dtb_info.memory_addr + dtb_info.memory_size);
+    }
 
     unsafe {
         main();
@@ -79,8 +84,36 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     axhal::misc::terminate();
 }
 
+#[cfg(feature = "alloc")]
+fn allocator_final_init(memory_size: usize) {
+    use axhal::mem::{free_regions, MemRegionFlags};
+
+    info!("Initialize global memory allocator...");
+
+    let mut max_region_size = 0;
+    let mut max_region_paddr = 0.into();
+    for r in free_regions(memory_size) {
+        if r.flags.contains(MemRegionFlags::FREE) && r.size > max_region_size {
+            max_region_size = r.size;
+            max_region_paddr = r.paddr;
+        }
+    }
+    for r in free_regions(memory_size) {
+        if r.flags.contains(MemRegionFlags::FREE) && r.paddr == max_region_paddr {
+            axalloc::final_init(phys_to_virt(r.paddr).as_usize(), r.size);
+            break;
+        }
+    }
+    for r in free_regions(memory_size) {
+        if r.flags.contains(MemRegionFlags::FREE) && r.paddr != max_region_paddr {
+            axalloc::final_add_memory(phys_to_virt(r.paddr).as_usize(), r.size)
+                .expect("add heap memory region failed");
+        }
+    }
+}
+
 #[cfg(feature = "paging")]
-fn remap_kernel_memory(dtb: DtbInfo) -> Result<(), axhal::paging::PagingError> {
+fn remap_kernel_memory(dtb: &DtbInfo) -> Result<(), axhal::paging::PagingError> {
     use axhal::mem::{kernel_image_regions, free_regions};
     use axhal::mem::{MemRegion, MemRegionFlags};
 
@@ -95,7 +128,7 @@ fn remap_kernel_memory(dtb: DtbInfo) -> Result<(), axhal::paging::PagingError> {
     });
 
     let regions = kernel_image_regions()
-        .chain(free_regions(dtb.memory_size))
+        .chain(free_regions(dtb.memory_addr + dtb.memory_size))
         .chain(mmio_regions);
 
     let mut kernel_page_table = PageTable::try_new()?;

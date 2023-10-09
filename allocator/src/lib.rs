@@ -3,11 +3,13 @@
 #![no_std]
 
 mod early;
+pub use early::EarlyAllocator;
+
+mod tlsf;
+pub use tlsf::TlsfByteAllocator;
 
 use core::ptr::NonNull;
 use core::alloc::Layout;
-
-pub use early::EarlyAllocator;
 
 /// The error type used for allocation.
 #[derive(Debug)]

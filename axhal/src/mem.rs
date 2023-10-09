@@ -112,11 +112,12 @@ pub fn kernel_image_regions() -> impl Iterator<Item = MemRegion> {
 }
 
 /// Returns the default free memory regions (kernel image end to physical memory end).
-pub fn free_regions(phys_mem_size: usize) -> impl Iterator<Item = MemRegion> {
+pub fn free_regions(memory_end: usize) -> impl Iterator<Item = MemRegion> {
     let start = virt_to_phys((_ekernel as usize).into()).align_up_4k();
+    let end = PhysAddr::from(memory_end).align_down_4k();
     core::iter::once(MemRegion {
         paddr: start,
-        size: PhysAddr::from(phys_mem_size).align_down_4k().as_usize(),
+        size: end.as_usize() - start.as_usize(),
         flags: MemRegionFlags::FREE | MemRegionFlags::READ | MemRegionFlags::WRITE,
         name: "free memory",
     })
