@@ -1,7 +1,7 @@
 /// Constructs a new handle to the standard output of the current process.
 
 use core::fmt::{Write, Error};
-use axsync::BootCell;
+use spinlock::SpinNoIrq;
 
 struct StdoutRaw;
 
@@ -12,8 +12,8 @@ impl Write for StdoutRaw {
     }
 }
 
-static STDOUT: BootCell<StdoutRaw> = unsafe { BootCell::new(StdoutRaw) };
+static STDOUT: SpinNoIrq<StdoutRaw> = SpinNoIrq::new(StdoutRaw);
 
 pub fn __print_impl(args: core::fmt::Arguments) {
-    STDOUT.exclusive_access().write_fmt(args).unwrap();
+    STDOUT.lock().write_fmt(args).unwrap();
 }

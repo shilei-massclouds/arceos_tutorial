@@ -11,6 +11,6 @@ alloc = ["axruntime/alloc"]
 paging = ["axruntime/paging"]
 
 [dependencies]
-axsync = { path = "../axsync" }
+spinlock = { path = "../spinlock" }
 axhal = { path = "../axhal" }
 axruntime = { path = "../axruntime" }
