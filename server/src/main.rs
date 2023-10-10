@@ -19,7 +19,9 @@ pub fn main() {
         page[PAGE_SIZE - 1] = 255;
         print!("Alloc one page ok! {:?}\n", page.get(PAGE_SIZE-1));
     }
-    let mut s = axstd::String::from("ABC");
-    s.push('D');
-    print!("Alloc string ok! {}\n", s);
+    let mut v = alloc::vec::Vec::new();
+    for i in 0..1000 {
+        v.push(i);
+    }
+    print!("Alloc vec and expand allocator ok! {}\n", v.len());
 }

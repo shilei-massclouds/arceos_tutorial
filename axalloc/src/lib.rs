@@ -4,11 +4,14 @@
 
 use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
-use allocator::{AllocResult, BaseAllocator, ByteAllocator, PageAllocator};
+use allocator::{AllocResult};
+use allocator::{BaseAllocator, ByteAllocator, PageAllocator};
 use allocator::{EarlyAllocator, TlsfByteAllocator, BitmapPageAllocator};
 
 use axsync::BootCell;
 
+#[macro_use]
+extern crate log;
 extern crate alloc;
 
 const PAGE_SIZE: usize = 4096;
@@ -83,14 +86,30 @@ impl GlobalAllocator {
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
-        if self.byte_alloc.exclusive_access().total_bytes() > 0 {
-            if let Ok(ptr) = self.byte_alloc.exclusive_access().alloc(layout) {
+        if self.byte_alloc.exclusive_access().total_bytes() == 0 {
+            return self.early_alloc(layout);
+        }
+
+        loop {
+            let mut balloc = self.byte_alloc.exclusive_access();
+            if let Ok(ptr) = balloc.alloc(layout) {
                 return ptr.as_ptr();
             } else {
-                alloc::alloc::handle_alloc_error(layout)
+                let old_size = balloc.total_bytes();
+                let expand_size = old_size
+                    .max(layout.size())
+                    .next_power_of_two()
+                    .max(PAGE_SIZE);
+                let layout = Layout::from_size_align(expand_size, PAGE_SIZE).unwrap();
+                let heap_ptr = self.alloc_pages(layout) as usize;
+                info!(
+                    "expand heap memory: [{:#x}, {:#x})",
+                    heap_ptr,
+                    heap_ptr + expand_size
+                );
+                let _ = balloc.add_memory(heap_ptr, expand_size);
             }
         }
-        self.early_alloc(layout)
     }
 
     fn early_alloc(&self, layout: Layout) -> *mut u8 {
@@ -105,8 +124,7 @@ impl GlobalAllocator {
 
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if layout.size() % PAGE_SIZE == 0 {
-            assert_eq!(layout.align(), PAGE_SIZE);
+        if layout.size() % PAGE_SIZE == 0 && layout.align() == PAGE_SIZE {
             self.alloc_pages(layout)
         } else {
             self.alloc_bytes(layout)
