@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 rlsf = { version = "0.2" }
+bitmap-allocator = { git = "https://github.com/rcore-os/bitmap-allocator.git", rev = "88e871a" }

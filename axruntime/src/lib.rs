@@ -69,7 +69,11 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         remap_kernel_memory(&dtb_info).expect("remap kernel memoy failed");
     }
 
-    info!("Heap available: {}K.", axalloc::available_bytes()/1024);
+    info!("Heap total: {}K, avail: {}K, used: {}K ({} pages)",
+          axalloc::total_bytes()/1024,
+          axalloc::available_bytes()/1024,
+          axalloc::used_bytes()/1024,
+          axalloc::used_pages());
 
     #[cfg(feature = "alloc")]
     {
@@ -88,7 +92,7 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 fn allocator_final_init(memory_size: usize) {
     use axhal::mem::{free_regions, MemRegionFlags};
 
-    info!("Initialize global memory allocator...");
+    info!("Finalize global memory allocator...");
 
     let mut max_region_size = 0;
     let mut max_region_paddr = 0.into();

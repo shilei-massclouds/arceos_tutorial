@@ -1,6 +1,7 @@
 //! Various allocator algorithms in a unified interface.
 
 #![no_std]
+#![feature(result_option_inspect)]
 
 mod early;
 pub use early::EarlyAllocator;
@@ -8,8 +9,21 @@ pub use early::EarlyAllocator;
 mod tlsf;
 pub use tlsf::TlsfByteAllocator;
 
+mod bitmap;
+pub use bitmap::BitmapPageAllocator;
+
 use core::ptr::NonNull;
 use core::alloc::Layout;
+
+#[inline]
+const fn align_down(pos: usize, align: usize) -> usize {
+    pos & !(align - 1)
+}
+
+#[inline]
+const fn align_up(pos: usize, align: usize) -> usize {
+    (pos + align - 1) & !(align - 1)
+}
 
 /// The error type used for allocation.
 #[derive(Debug)]
@@ -56,9 +70,6 @@ pub trait ByteAllocator: BaseAllocator {
 
 /// Page-granularity allocator.
 pub trait PageAllocator: BaseAllocator {
-    /// The size of a memory page.
-    const PAGE_SIZE: usize;
-
     /// Allocate contiguous memory pages with given count and alignment.
     fn alloc_pages(&mut self, num_pages: usize, align_pow2: usize) -> AllocResult<usize>;
 

@@ -4,16 +4,20 @@
 
 use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
-use allocator::{AllocResult, BaseAllocator, ByteAllocator};
-use allocator::{EarlyAllocator, TlsfByteAllocator};
+use allocator::{AllocResult, BaseAllocator, ByteAllocator, PageAllocator};
+use allocator::{EarlyAllocator, TlsfByteAllocator, BitmapPageAllocator};
 
 use axsync::BootCell;
 
 extern crate alloc;
 
+const PAGE_SIZE: usize = 4096;
+const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
+
 struct GlobalAllocator {
     early_alloc: BootCell<EarlyAllocator>,
-    byte_alloc: BootCell<TlsfByteAllocator>
+    byte_alloc: BootCell<TlsfByteAllocator>,
+    page_alloc: BootCell<BitmapPageAllocator>
 }
 
 impl GlobalAllocator {
@@ -25,6 +29,9 @@ impl GlobalAllocator {
             byte_alloc: unsafe {
                 BootCell::new(TlsfByteAllocator::new())
             },
+            page_alloc: unsafe {
+                BootCell::new(BitmapPageAllocator::new())
+            },
         }
     }
 
@@ -33,20 +40,49 @@ impl GlobalAllocator {
     }
 
     pub fn final_init(&self, start: usize, size: usize) {
-        self.byte_alloc.exclusive_access().init(start, size)
+        assert!(size > MIN_HEAP_SIZE);
+        let layout = Layout::from_size_align(MIN_HEAP_SIZE, PAGE_SIZE).unwrap();
+        self.page_alloc.exclusive_access().init(start, size);
+        let heap_ptr = self.alloc_pages(layout) as usize;
+        self.byte_alloc.exclusive_access().init(heap_ptr, MIN_HEAP_SIZE);
     }
 
     pub fn final_add_memory(&self, start: usize, size: usize) -> AllocResult {
         self.byte_alloc.exclusive_access().add_memory(start, size)
     }
 
+    pub fn total_bytes(&self) -> usize {
+        self.early_alloc.exclusive_access().total_bytes()
+    }
+
     pub fn available_bytes(&self) -> usize {
         self.early_alloc.exclusive_access().available_bytes()
     }
-}
 
-unsafe impl GlobalAlloc for GlobalAllocator {
-    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+    pub fn used_bytes(&self) -> usize {
+        let alloc = self.early_alloc.exclusive_access();
+        alloc.used_bytes() + (alloc.used_pages() * PAGE_SIZE)
+    }
+
+    pub fn used_pages(&self) -> usize {
+        self.early_alloc.exclusive_access().used_pages()
+    }
+
+    fn alloc_pages(&self, layout: Layout) -> *mut u8 {
+        assert!(layout.align() % PAGE_SIZE == 0);
+        assert!(layout.size() % PAGE_SIZE == 0);
+        let num = layout.size() / PAGE_SIZE;
+        if self.page_alloc.exclusive_access().total_pages() > 0 {
+            if let Ok(ptr) = self.page_alloc.exclusive_access().alloc_pages(num, layout.align()) {
+                return ptr as *mut u8;
+            } else {
+                alloc::alloc::handle_alloc_error(layout)
+            }
+        }
+        self.early_alloc(layout)
+    }
+
+    fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
         if self.byte_alloc.exclusive_access().total_bytes() > 0 {
             if let Ok(ptr) = self.byte_alloc.exclusive_access().alloc(layout) {
                 return ptr.as_ptr();
@@ -54,12 +90,26 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                 alloc::alloc::handle_alloc_error(layout)
             }
         }
+        self.early_alloc(layout)
+    }
 
+    fn early_alloc(&self, layout: Layout) -> *mut u8 {
         // Final allocator hasn't initialized yet, use early allocator.
         if let Ok(ptr) = self.early_alloc.exclusive_access().alloc(layout) {
             ptr.as_ptr()
         } else {
             alloc::alloc::handle_alloc_error(layout)
+        }
+    }
+}
+
+unsafe impl GlobalAlloc for GlobalAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        if layout.size() % PAGE_SIZE == 0 {
+            assert_eq!(layout.align(), PAGE_SIZE);
+            self.alloc_pages(layout)
+        } else {
+            self.alloc_bytes(layout)
         }
     }
 
@@ -86,6 +136,18 @@ pub fn final_add_memory(start: usize, size: usize) -> AllocResult {
     GLOBAL_ALLOCATOR.final_add_memory(start, size)
 }
 
+pub fn total_bytes() -> usize {
+    GLOBAL_ALLOCATOR.total_bytes()
+}
+
 pub fn available_bytes() -> usize {
     GLOBAL_ALLOCATOR.available_bytes()
+}
+
+pub fn used_bytes() -> usize {
+    GLOBAL_ALLOCATOR.used_bytes()
+}
+
+pub fn used_pages() -> usize {
+    GLOBAL_ALLOCATOR.used_pages()
 }
