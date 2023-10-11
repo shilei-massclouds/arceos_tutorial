@@ -87,8 +87,7 @@ pub fn set_priority(prio: isize) -> bool {
 /// Current task gives up the CPU time voluntarily, and switches to another
 /// ready task.
 pub fn yield_now() {
-    todo!();
-    //RUN_QUEUE.lock().yield_current();
+    RUN_QUEUE.lock().yield_current();
 }
 
 /*

@@ -32,7 +32,6 @@ impl AxRunQueue {
         self.scheduler.add_task(task);
     }
 
-    /*
     pub fn yield_current(&mut self) {
         let curr = crate::current();
         trace!("task yield: {}", curr.id_name());
@@ -40,6 +39,7 @@ impl AxRunQueue {
         self.resched(false);
     }
 
+    /*
     pub fn set_current_priority(&mut self, prio: isize) -> bool {
         self.scheduler
             .set_priority(crate::current().as_task_ref(), prio)

@@ -7,17 +7,32 @@ extern crate alloc;
 
 use axstd::println;
 use axstd::thread;
+use core::sync::atomic::{AtomicUsize, Ordering};
 
 const PAGE_SIZE: usize = 4096;
 
-#[no_mangle]
-pub fn main() {
-    println!("Hello, ArceOS! Start task...");
+static FLAG: AtomicUsize = AtomicUsize::new(0);
 
-    let computation = thread::spawn(|| {
-        42
+#[no_mangle]
+fn main() {
+    thread::spawn(move || {
+        println!("Spawned-thread is waiting ...");
+        while FLAG.load(Ordering::Relaxed) < 1 {
+            // For cooperative scheduler, we must yield here!
+            // For preemptive scheduler, just relaxed! Leave it for scheduler.
+        }
+
+        let _ = FLAG.fetch_add(1, Ordering::Relaxed);
     });
 
-    let result = computation.join().unwrap();
-    println!("Task gets result: {result}");
+    // Give spawned thread a chance to start.
+    thread::yield_now();
+
+    println!("Main thread set FLAG to notify spawned-thread to continue.");
+    let _ = FLAG.fetch_add(1, Ordering::Relaxed);
+    println!("Main thread waits spawned-thread to respond ...");
+    while FLAG.load(Ordering::Relaxed) < 2 {
+        thread::yield_now();
+    }
+    println!("Preempt test run OK!");
 }

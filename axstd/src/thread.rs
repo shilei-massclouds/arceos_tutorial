@@ -148,6 +148,15 @@ where
     Builder::new().spawn(f).expect("failed to spawn thread")
 }
 
+/// Current thread gives up the CPU time voluntarily, and switches to another
+/// ready thread.
+///
+/// For single-threaded configuration (`multitask` feature is disabled), we just
+/// relax the CPU and wait for incoming interrupts.
+pub fn yield_now() {
+    axtask::yield_now();
+}
+
 struct Packet<T> {
     result: UnsafeCell<Option<T>>,
 }
