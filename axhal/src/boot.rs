@@ -1,6 +1,6 @@
 // boot: riscv64 startup entry.
 
-const TASK_STACK_SIZE: usize = 0x40000; // 256 K
+use axconfig::TASK_STACK_SIZE;
 
 #[link_section = ".bss.stack"]
 static mut BOOT_STACK: [u8; TASK_STACK_SIZE] = [0; TASK_STACK_SIZE];

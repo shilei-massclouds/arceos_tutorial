@@ -5,7 +5,7 @@
 
 mod base;
 
-use kernel_guard::NoPreemptIrqSave;
+use kernel_guard::{NoOp, NoPreemptIrqSave};
 
 pub use self::base::BaseSpinLock;
 
@@ -14,3 +14,9 @@ pub use self::base::BaseSpinLock;
 ///
 /// It can be used in the IRQ-enabled context.
 pub type SpinNoIrq<T> = BaseSpinLock<NoPreemptIrqSave, T>;
+
+/// A raw spin lock that does nothing while trying to lock.
+///
+/// It must be used in the preemption-disabled and local IRQ-disabled context,
+/// or never be used in interrupt handlers.
+pub type SpinRaw<T> = BaseSpinLock<NoOp, T>;

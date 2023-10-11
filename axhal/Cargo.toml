@@ -15,3 +15,5 @@ memory_addr = { path = "../memory_addr" }
 bitflags = "2.2"
 page_table = { path = "../page_table", optional = true }
 page_table_entry = { path = "../page_table_entry", optional = true }
+axconfig = { path = "../axconfig" }
+kernel_guard = { path = "../kernel_guard" }

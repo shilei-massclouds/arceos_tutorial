@@ -1,0 +1,25 @@
+[package]
+name = "axtask"
+version = "0.1.0"
+edition = "2021"
+authors = ["Yuekai Jia <equation618@gmail.com>"]
+description = "ArceOS task management module"
+license = "GPL-3.0-or-later OR Apache-2.0"
+homepage = "https://github.com/rcore-os/arceos"
+repository = "https://github.com/rcore-os/arceos/tree/main/modules/axtask"
+documentation = "https://rcore-os.github.io/arceos/axtask/index.html"
+
+[features]
+default = []
+
+[dependencies]
+log = "0.4"
+memory_addr = { path = "../memory_addr" }
+lazy_init = { path = "../lazy_init" }
+
+axhal = { path = "../axhal" }
+axconfig = { path = "../axconfig" }
+spinlock = { path = "../spinlock" }
+scheduler = { path = "../scheduler" }
+kernel_guard = { path = "../kernel_guard" }
+crate_interface = { path = "../crate_interface" }

@@ -16,3 +16,4 @@ axdtb = { path = "../axdtb" }
 crate_interface = { path = "../crate_interface" }
 axalloc = { path = "../axalloc", optional = true }
 axsync = { path = "../axsync" }
+axtask = { path = "../axtask" }

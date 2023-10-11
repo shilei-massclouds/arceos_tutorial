@@ -7,6 +7,9 @@ extern crate axruntime;
 mod macros;
 
 pub mod io;
+pub mod thread;
 
 // Re-export String
 pub use alloc::string::String;
+
+pub type Result<T> = axerrno::AxResult<T>;

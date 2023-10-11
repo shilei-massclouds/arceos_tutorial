@@ -18,6 +18,37 @@ pub trait BaseGuard {
     fn release(state: Self::State);
 }
 
+/// A guard that disables/enables local IRQs around the critical section.
+pub struct IrqSave(usize);
+
+impl BaseGuard for IrqSave {
+    type State = usize;
+
+    #[inline]
+    fn acquire() -> Self::State {
+        local_irq_save_and_disable()
+    }
+
+    #[inline]
+    fn release(state: Self::State) {
+        // restore IRQ states
+        local_irq_restore(state);
+    }
+}
+
+impl IrqSave {
+    /// Creates a new [`IrqSave`] guard.
+    pub fn new() -> Self {
+        Self(Self::acquire())
+    }
+}
+
+impl Drop for IrqSave {
+    fn drop(&mut self) {
+        Self::release(self.0)
+    }
+}
+
 pub struct NoPreemptIrqSave(usize);
 
 impl BaseGuard for NoPreemptIrqSave {
@@ -44,4 +75,24 @@ fn local_irq_save_and_disable() -> usize {
 fn local_irq_restore(flags: usize) {
     // restore the `SIE` bit
     unsafe { asm!("csrrs x0, sstatus, {}", in(reg) flags) };
+}
+
+/// A no-op guard that does nothing around the critical section.
+pub struct NoOp;
+
+impl BaseGuard for NoOp {
+    type State = ();
+    fn acquire() -> Self::State {}
+    fn release(_state: Self::State) {}
+}
+
+impl NoOp {
+    /// Creates a new [`NoOp`] guard.
+    pub const fn new() -> Self {
+        Self
+    }
+}
+
+impl Drop for NoOp {
+    fn drop(&mut self) {}
 }

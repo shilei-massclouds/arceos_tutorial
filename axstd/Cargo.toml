@@ -14,3 +14,6 @@ paging = ["axruntime/paging"]
 spinlock = { path = "../spinlock" }
 axhal = { path = "../axhal" }
 axruntime = { path = "../axruntime" }
+axerrno = { path = "../axerrno" }
+axconfig = { path = "../axconfig" }
+axtask = { path = "../axtask" }
