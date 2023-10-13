@@ -96,3 +96,35 @@ impl NoOp {
 impl Drop for NoOp {
     fn drop(&mut self) {}
 }
+
+/// A guard that disables/enables kernel preemption around the critical
+/// section.
+pub struct NoPreempt;
+
+impl BaseGuard for NoPreempt {
+    type State = ();
+    fn acquire() -> Self::State {
+        // disable preempt
+        #[cfg(feature = "preempt")]
+        crate_interface::call_interface!(KernelGuardIf::disable_preempt);
+    }
+    fn release(_state: Self::State) {
+        // enable preempt
+        #[cfg(feature = "preempt")]
+        crate_interface::call_interface!(KernelGuardIf::enable_preempt);
+    }
+}
+
+impl NoPreempt {
+    /// Creates a new [`NoPreempt`] guard.
+    pub fn new() -> Self {
+        Self::acquire();
+        Self
+    }
+}
+
+impl Drop for NoPreempt {
+    fn drop(&mut self) {
+        Self::release(())
+    }
+}

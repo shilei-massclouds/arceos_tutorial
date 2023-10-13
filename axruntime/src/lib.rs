@@ -6,6 +6,7 @@ extern crate axlog;
 extern crate alloc;
 
 mod lang_items;
+mod trap;
 
 use core::str;
 use alloc::string::String;

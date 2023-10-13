@@ -47,7 +47,7 @@ justrun:
 	@printf "    $(CYAN_C)Running$(END_C) on qemu...\n"
 	$(QEMU) -m 128M -smp $(SMP) -machine virt \
 		-bios default -kernel $(OUT_BIN) -nographic \
-		-D qemu.log -d in_asm,int,mmu,pcall,cpu_reset,guest_errors
+		-D qemu.log -d in_asm
 
 $(OUT_BIN): $(OUT_ELF)
 	$(OBJCOPY) $(OUT_ELF) --strip-all -O binary $@

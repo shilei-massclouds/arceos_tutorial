@@ -17,3 +17,6 @@ page_table = { path = "../page_table", optional = true }
 page_table_entry = { path = "../page_table_entry", optional = true }
 axconfig = { path = "../axconfig" }
 kernel_guard = { path = "../kernel_guard" }
+crate_interface = { path = "../crate_interface" }
+lazy_init = { path = "../lazy_init" }
+handler_table = { path = "../handler_table" }

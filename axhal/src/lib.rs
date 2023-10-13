@@ -9,8 +9,13 @@
 #[macro_use]
 extern crate axlog;
 
+#[macro_use]
+mod macros;
+
 mod boot;
 
+pub mod trap;
+pub mod irq;
 pub mod context;
 pub mod paging;
 pub mod cpu;
@@ -21,10 +26,12 @@ pub mod console;
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {
+        fn trap_vector_base();
         fn rust_main(hartid: usize, dtb: usize);
     }
 
     mem::clear_bss();
+    trap::set_trap_vector_base(trap_vector_base as usize);
 
     rust_main(hartid, dtb);
 }

@@ -15,6 +15,8 @@ static FLAG: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
 fn main() {
+    raise_break_exception();
+
     thread::spawn(move || {
         println!("Spawned-thread is waiting ...");
         while FLAG.load(Ordering::Relaxed) < 1 {
@@ -35,4 +37,12 @@ fn main() {
         thread::yield_now();
     }
     println!("Preempt test run OK!");
+}
+
+fn raise_break_exception() {
+    unsafe {
+        core::arch::asm!("ebreak");
+        core::arch::asm!("nop");
+        core::arch::asm!("nop");
+    }
 }
