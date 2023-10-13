@@ -35,3 +35,11 @@ unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
 
     rust_main(hartid, dtb);
 }
+
+/// Initializes the platform devices for the primary CPU.
+///
+/// For example, the interrupt controller and the timer.
+pub fn platform_init() {
+    self::irq::init_percpu();
+    self::time::init_percpu();
+}

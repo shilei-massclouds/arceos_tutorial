@@ -1,8 +1,19 @@
 use lazy_init::LazyInit;
 use handler_table::HandlerTable;
+use riscv::register::sstatus;
+use riscv::register::sie;
 
 /// The maximum number of IRQs.
 pub const MAX_IRQ_COUNT: usize = 1024;
+
+/// `Interrupt` bit in `scause`
+pub(super) const INTC_IRQ_BASE: usize = 1 << (usize::BITS - 1);
+
+/// Supervisor timer interrupt in `scause`
+pub(super) const S_TIMER: usize = INTC_IRQ_BASE + 5;
+
+/// The timer IRQ number (supervisor timer interrupt in `scause`).
+pub const TIMER_IRQ_NUM: usize = S_TIMER;
 
 /// The type if an IRQ handler.
 pub type IrqHandler = handler_table::Handler;
@@ -43,5 +54,50 @@ pub(crate) fn dispatch_irq_common(irq_num: usize) {
     trace!("IRQ {}", irq_num);
     if !IRQ_HANDLER_TABLE.handle(irq_num) {
         warn!("Unhandled IRQ {}", irq_num);
+    }
+}
+
+/// Platform-independent IRQ handler registration.
+///
+/// It also enables the IRQ if the registration succeeds. It returns `false` if
+/// the registration failed.
+#[allow(dead_code)]
+pub(crate) fn register_handler_common(irq_num: usize, handler: IrqHandler) -> bool {
+    if irq_num < MAX_IRQ_COUNT && IRQ_HANDLER_TABLE.register_handler(irq_num, handler) {
+        return true;
+    }
+    warn!("register handler for IRQ {} failed", irq_num);
+    false
+}
+
+/// Registers an IRQ handler for the given IRQ.
+///
+/// It also enables the IRQ if the registration succeeds. It returns `false` if
+/// the registration failed.
+pub fn register_handler(scause: usize, handler: IrqHandler) -> bool {
+    with_cause!(
+        scause,
+        @TIMER => if !TIMER_HANDLER.is_init() {
+            TIMER_HANDLER.init_by(handler);
+            true
+        } else {
+            false
+        },
+        @EXT => crate::irq::register_handler_common(scause & !INTC_IRQ_BASE, handler),
+    )
+}
+
+/// Allows the current CPU to respond to interrupts.
+#[inline]
+pub fn enable_irqs() {
+    unsafe { sstatus::set_sie() }
+}
+
+pub(super) fn init_percpu() {
+    // enable soft interrupts, timer interrupts, and external interrupts
+    unsafe {
+        sie::set_ssoft();
+        sie::set_stimer();
+        sie::set_sext();
     }
 }

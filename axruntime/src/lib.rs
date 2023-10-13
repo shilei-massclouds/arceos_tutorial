@@ -81,7 +81,13 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         allocator_final_init(dtb_info.memory_addr + dtb_info.memory_size);
     }
 
+    info!("Initialize platform devices...");
+    axhal::platform_init();
+
     axtask::init_scheduler();
+
+    info!("Initialize interrupt handlers...");
+    init_interrupt();
 
     unsafe {
         main();
@@ -89,6 +95,38 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
     debug!("main task exited: exit_code={}", 0);
     axhal::misc::terminate();
+}
+
+fn init_interrupt() {
+    use axhal::irq::TIMER_IRQ_NUM;
+
+    // Setup timer interrupt handler
+    const PERIODIC_INTERVAL_NANOS: u64 =
+        axhal::time::NANOS_PER_SEC / axconfig::TICKS_PER_SEC as u64;
+
+    static mut NEXT_DEADLINE: u64 = 0;
+
+    fn update_timer() {
+        let now_ns = axhal::time::current_time_nanos();
+        // Safety: we have disabled preemption in IRQ handler.
+        let mut deadline = unsafe { NEXT_DEADLINE };
+        if now_ns >= deadline {
+            deadline = now_ns + PERIODIC_INTERVAL_NANOS;
+        }
+        unsafe { NEXT_DEADLINE = deadline + PERIODIC_INTERVAL_NANOS };
+        trace!("now {} deadline {}", now_ns, deadline);
+        axhal::time::set_oneshot_timer(deadline);
+    }
+
+    axhal::irq::register_handler(TIMER_IRQ_NUM, || {
+        update_timer();
+        debug!("On timer tick!");
+        //#[cfg(feature = "multitask")]
+        //axtask::on_timer_tick();
+    });
+
+    // Enable IRQs before starting app
+    axhal::irq::enable_irqs();
 }
 
 #[cfg(feature = "alloc")]
