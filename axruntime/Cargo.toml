@@ -15,4 +15,4 @@ axalloc = { path = "../axalloc" }
 axsync = { path = "../axsync" }
 page_table = { path = "../page_table" }
 axtask = { path = "../axtask" }
-#kernel_guard = { path = "../kernel_guard" }
+kernel_guard = { path = "../kernel_guard" }

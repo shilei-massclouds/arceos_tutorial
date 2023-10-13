@@ -21,3 +21,8 @@ unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     trap::set_trap_vector_base(trap_vector_base as usize);
     rust_main(hartid, dtb);
 }
+
+pub fn platform_init() {
+    self::irq::init_percpu();
+    self::time::init_percpu();
+}

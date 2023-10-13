@@ -20,6 +20,10 @@ impl<T> BootOnceCell<T> {
     pub fn get(&self) -> &T {
         self.inner.get().unwrap()
     }
+
+    pub fn is_init(&self) -> bool {
+        self.inner.get().is_some()
+    }
 }
 
 unsafe impl<T> Sync for BootOnceCell<T> {}

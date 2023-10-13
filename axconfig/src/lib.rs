@@ -5,6 +5,7 @@ pub const PAGE_SIZE: usize = 1 << PAGE_SHIFT;
 pub const PHYS_VIRT_OFFSET: usize = 0xffff_ffc0_0000_0000;
 pub const ASPACE_BITS: usize = 39;
 pub const TASK_STACK_SIZE: usize = 0x40000; // 256 K
+pub const TICKS_PER_SEC: usize = 100;
 
 pub const SIZE_1G: usize = 0x4000_0000;
 pub const SIZE_2M: usize = 0x20_0000;
