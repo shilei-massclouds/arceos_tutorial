@@ -2,7 +2,7 @@ use axhal::context::TaskContext;
 use memory_addr::{align_up_4k, VirtAddr};
 use alloc::{boxed::Box, string::String, sync::Arc};
 use core::ops::Deref;
-use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use core::{alloc::Layout, cell::UnsafeCell, fmt, ptr::NonNull};
 use crate::{AxRunQueue, AxTask, AxTaskRef, WaitQueue};
 use core::mem::ManuallyDrop;
@@ -82,6 +82,10 @@ pub struct TaskInner {
     state: AtomicU8,
 
     in_wait_queue: AtomicBool,
+    in_timer_list: AtomicBool,
+
+    need_resched: AtomicBool,
+    preempt_disable_count: AtomicUsize,
 
     exit_code: AtomicI32,
     wait_for_exit: WaitQueue,
@@ -129,6 +133,9 @@ impl TaskInner {
             entry: None,
             state: AtomicU8::new(TaskState::Ready as u8),
             in_wait_queue: AtomicBool::new(false),
+            in_timer_list: AtomicBool::new(false),
+            need_resched: AtomicBool::new(false),
+            preempt_disable_count: AtomicUsize::new(0),
             exit_code: AtomicI32::new(0),
             wait_for_exit: WaitQueue::new(),
             kstack: None,
@@ -219,6 +226,42 @@ impl TaskInner {
         self.in_wait_queue.store(in_wait_queue, Ordering::Release);
     }
 
+    pub(crate) fn set_in_timer_list(&self, in_timer_list: bool) {
+        self.in_timer_list.store(in_timer_list, Ordering::Release);
+    }
+
+    pub(crate) fn set_preempt_pending(&self, pending: bool) {
+        self.need_resched.store(pending, Ordering::Release)
+    }
+
+    #[inline]
+    pub(crate) fn can_preempt(&self, current_disable_count: usize) -> bool {
+        self.preempt_disable_count.load(Ordering::Acquire) == current_disable_count
+    }
+
+    #[inline]
+    pub(crate) fn disable_preempt(&self) {
+        self.preempt_disable_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    #[inline]
+    pub(crate) fn enable_preempt(&self, resched: bool) {
+        if self.preempt_disable_count.fetch_sub(1, Ordering::Relaxed) == 1 && resched {
+            // If current task is pending to be preempted, do rescheduling.
+            Self::current_check_preempt_pending();
+        }
+    }
+
+    fn current_check_preempt_pending() {
+        let curr = crate::current();
+        if curr.need_resched.load(Ordering::Acquire) && curr.can_preempt(0) {
+            let mut rq = crate::RUN_QUEUE.lock();
+            if curr.need_resched.load(Ordering::Acquire) {
+                rq.preempt_resched();
+            }
+        }
+    }
+
     pub(crate) fn notify_exit(&self, exit_code: i32, rq: &mut AxRunQueue) {
         self.exit_code.store(exit_code, Ordering::Release);
         self.wait_for_exit.notify_all_locked(false, rq);
@@ -299,6 +342,7 @@ impl Deref for CurrentTask {
 extern "C" fn task_entry() -> ! {
     // release the lock that was implicitly held across the reschedule
     unsafe { crate::RUN_QUEUE.force_unlock() };
+    axhal::irq::enable_irqs();
     let task = crate::current();
     if let Some(entry) = task.entry {
         unsafe { Box::from_raw(entry)() };

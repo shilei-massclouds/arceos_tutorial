@@ -9,15 +9,12 @@ use axstd::println;
 use axstd::thread;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
-const PAGE_SIZE: usize = 4096;
-
 static FLAG: AtomicUsize = AtomicUsize::new(0);
 
 #[no_mangle]
 fn main() {
     //raise_break_exception();
 
-    /*
     thread::spawn(move || {
         println!("Spawned-thread is waiting ...");
         while FLAG.load(Ordering::Relaxed) < 1 {
@@ -37,8 +34,6 @@ fn main() {
     while FLAG.load(Ordering::Relaxed) < 2 {
         thread::yield_now();
     }
-    */
-    loop {}
     println!("Preempt test run OK!");
 }
 

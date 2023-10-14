@@ -121,8 +121,7 @@ fn init_interrupt() {
     axhal::irq::register_handler(TIMER_IRQ_NUM, || {
         update_timer();
         debug!("On timer tick!");
-        //#[cfg(feature = "multitask")]
-        //axtask::on_timer_tick();
+        axtask::on_timer_tick();
     });
 
     // Enable IRQs before starting app

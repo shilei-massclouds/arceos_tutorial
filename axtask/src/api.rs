@@ -3,13 +3,37 @@ use alloc::{string::String, sync::Arc};
 pub use crate::task::{CurrentTask, TaskId, TaskInner};
 pub(crate) use crate::run_queue::{AxRunQueue, RUN_QUEUE};
 
-pub(crate) type AxTask = scheduler::FifoTask<TaskInner>;
-pub(crate) type Scheduler = scheduler::FifoScheduler<TaskInner>;
+const MAX_TIME_SLICE: usize = 5;
+pub(crate) type AxTask = scheduler::RRTask<TaskInner, MAX_TIME_SLICE>;
+pub(crate) type Scheduler = scheduler::RRScheduler<TaskInner, MAX_TIME_SLICE>;
 
 pub use crate::wait_queue::WaitQueue;
 
 /// The reference type of a task.
 pub type AxTaskRef = Arc<AxTask>;
+
+struct KernelGuardIfImpl;
+
+#[crate_interface::impl_interface]
+impl kernel_guard::KernelGuardIf for KernelGuardIfImpl {
+    fn disable_preempt() {
+        if let Some(curr) = current_may_uninit() {
+            curr.disable_preempt();
+        }
+    }
+
+    fn enable_preempt() {
+        if let Some(curr) = current_may_uninit() {
+            curr.enable_preempt(true);
+        }
+    }
+}
+
+/// Gets the current task, or returns [`None`] if the current task is not
+/// initialized.
+pub fn current_may_uninit() -> Option<CurrentTask> {
+    CurrentTask::try_get()
+}
 
 /// Spawns a new task with the given parameters.
 ///
@@ -23,20 +47,6 @@ where
     RUN_QUEUE.lock().add_task(task.clone());
     task
 }
-
-/*
-//! Task APIs for multi-task configuration.
-
-
-#[doc(cfg(feature = "multitask"))]
-
-
-/// Gets the current task, or returns [`None`] if the current task is not
-/// initialized.
-pub fn current_may_uninit() -> Option<CurrentTask> {
-    CurrentTask::try_get()
-}
-*/
 
 /// Gets the current task.
 ///
@@ -52,6 +62,7 @@ pub fn init_scheduler() {
     info!("Initialize scheduling...");
 
     crate::run_queue::init();
+    crate::timers::init();
 
     info!("  use {} scheduler.", Scheduler::scheduler_name());
 }
@@ -83,6 +94,14 @@ pub fn set_priority(prio: isize) -> bool {
     RUN_QUEUE.lock().set_current_priority(prio)
 }
 */
+
+/// Handles periodic timer ticks for the task manager.
+///
+/// For example, advance scheduler states, checks timed events, etc.
+pub fn on_timer_tick() {
+    crate::timers::check_events();
+    RUN_QUEUE.lock().scheduler_timer_tick();
+}
 
 /// Current task gives up the CPU time voluntarily, and switches to another
 /// ready task.
@@ -120,5 +139,6 @@ pub fn exit(exit_code: i32) -> ! {
 pub fn run_idle() -> ! {
     loop {
         yield_now();
+        axhal::irq::wait_for_irqs();
     }
 }

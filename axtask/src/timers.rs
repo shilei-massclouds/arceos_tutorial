@@ -1,4 +1,3 @@
-use alloc::sync::Arc;
 use axhal::time::current_time;
 use lazy_init::LazyInit;
 use spinlock::SpinNoIrq;
@@ -19,6 +18,7 @@ impl TimerEvent for TaskWakeupEvent {
     }
 }
 
+/*
 pub fn set_alarm_wakeup(deadline: TimeValue, task: AxTaskRef) {
     let mut timers = TIMER_LIST.lock();
     task.set_in_timer_list(true);
@@ -30,6 +30,7 @@ pub fn cancel_alarm(task: &AxTaskRef) {
     task.set_in_timer_list(false);
     timers.cancel(|t| Arc::ptr_eq(&t.0, task));
 }
+*/
 
 pub fn check_events() {
     loop {

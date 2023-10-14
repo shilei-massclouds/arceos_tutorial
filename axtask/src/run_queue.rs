@@ -26,6 +26,36 @@ impl AxRunQueue {
         SpinNoIrq::new(Self { scheduler })
     }
 
+    pub fn scheduler_timer_tick(&mut self) {
+        let curr = crate::current();
+        if !curr.is_idle() && self.scheduler.task_tick(curr.as_task_ref()) {
+            curr.set_preempt_pending(true);
+        }
+    }
+
+    pub fn preempt_resched(&mut self) {
+        let curr = crate::current();
+        assert!(curr.is_running());
+
+        // When we get the mutable reference of the run queue, we must
+        // have held the `SpinNoIrq` lock with both IRQs and preemption
+        // disabled. So we need to set `current_disable_count` to 1 in
+        // `can_preempt()` to obtain the preemption permission before
+        //  locking the run queue.
+        let can_preempt = curr.can_preempt(1);
+
+        debug!(
+            "current task is to be preempted: {}, allow={}",
+            curr.id_name(),
+            can_preempt
+        );
+        if can_preempt {
+            self.resched(true);
+        } else {
+            curr.set_preempt_pending(true);
+        }
+    }
+
     pub fn add_task(&mut self, task: AxTaskRef) {
         debug!("task spawn: {}", task.id_name());
         assert!(task.is_ready());
@@ -73,6 +103,9 @@ impl AxRunQueue {
         assert!(curr.is_running());
         assert!(!curr.is_idle());
 
+        // we must not block current task with preemption disabled.
+        assert!(curr.can_preempt(1));
+
         curr.set_state(TaskState::Blocked);
         wait_queue_push(curr.clone());
         self.resched(false);
@@ -83,6 +116,9 @@ impl AxRunQueue {
         if task.is_blocked() {
             task.set_state(TaskState::Ready);
             self.scheduler.add_task(task); // TODO: priority
+            if resched {
+                crate::current().set_preempt_pending(true);
+            }
         }
     }
 }
@@ -111,6 +147,7 @@ impl AxRunQueue {
             prev_task.id_name(),
             next_task.id_name()
         );
+        next_task.set_preempt_pending(false);
         next_task.set_state(TaskState::Running);
         if prev_task.ptr_eq(&next_task) {
             return;

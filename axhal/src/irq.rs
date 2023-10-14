@@ -12,6 +12,9 @@ pub(super) const INTC_IRQ_BASE: usize = 1 << (usize::BITS - 1);
 /// Supervisor timer interrupt in `scause`
 pub(super) const S_TIMER: usize = INTC_IRQ_BASE + 5;
 
+/// Supervisor external interrupt in `scause`
+pub(super) const S_EXT: usize = INTC_IRQ_BASE + 9;
+
 /// The timer IRQ number (supervisor timer interrupt in `scause`).
 pub const TIMER_IRQ_NUM: usize = S_TIMER;
 
@@ -91,6 +94,14 @@ pub fn register_handler(scause: usize, handler: IrqHandler) -> bool {
 #[inline]
 pub fn enable_irqs() {
     unsafe { sstatus::set_sie() }
+}
+
+/// Relaxes the current CPU and waits for interrupts.
+///
+/// It must be called with interrupts enabled, otherwise it will never return.
+#[inline]
+pub fn wait_for_irqs() {
+    unsafe { riscv::asm::wfi() }
 }
 
 pub(super) fn init_percpu() {

@@ -38,5 +38,7 @@ mod task;
 mod api;
 mod wait_queue;
 
+mod timers;
+
 pub use self::api::*;
 //pub use self::api::{sleep, sleep_until, yield_now};
