@@ -8,6 +8,7 @@ mod macros;
 
 pub mod io;
 pub mod thread;
+pub mod sync;
 
 // Re-export String
 pub use alloc::string::String;

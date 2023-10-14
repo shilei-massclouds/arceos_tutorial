@@ -112,17 +112,18 @@ impl WaitQueue {
         self.cancel_events(curr);
         timeout
     }
+    */
 
     /// Blocks the current task and put it into the wait queue, until the given
     /// `condition` becomes true, or the given duration has elapsed.
     ///
     /// Note that even other tasks notify this task, it will not wake up until
     /// the above conditions are met.
-    #[cfg(feature = "irq")]
     pub fn wait_timeout_until<F>(&self, dur: core::time::Duration, condition: F) -> bool
     where
         F: Fn() -> bool,
     {
+        /*
         let curr = crate::current();
         let deadline = axhal::time::current_time() + dur;
         debug!(
@@ -146,6 +147,8 @@ impl WaitQueue {
         }
         self.cancel_events(curr);
         timeout
+        */
+        todo!();
     }
 
     /// Wakes up one task in the wait queue, usually the first one.
@@ -178,6 +181,7 @@ impl WaitQueue {
         }
     }
 
+    /*
     /// Wake up the given task in the wait queue.
     ///
     /// If `resched` is true, the current task will be preempted when the

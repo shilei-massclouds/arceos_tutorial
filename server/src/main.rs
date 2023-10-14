@@ -7,13 +7,53 @@ extern crate alloc;
 
 use axstd::println;
 use axstd::thread;
-use core::sync::atomic::{AtomicUsize, Ordering};
-
-static FLAG: AtomicUsize = AtomicUsize::new(0);
+use axstd::sync::Mutex;
+use alloc::sync::Arc;
 
 #[no_mangle]
 fn main() {
     //raise_break_exception();
+    //cooperative_preemptive();
+
+    let flag = Arc::new(Mutex::new(0));
+    let flag2 = flag.clone();
+
+    thread::spawn(move || {
+        println!("Spawned-thread starts ...");
+        let mut lock = flag2.lock();
+        *lock += 1;
+        println!("Spawned-thread starts ok! {}", *lock);
+    });
+
+    {
+        println!("Main thread set FLAG to notify spawned-thread to continue.");
+        let mut lock = flag.lock();
+        *lock += 1;
+    }
+
+    println!("Main thread waits spawned-thread to respond ...");
+    loop {
+        let mut lock = flag.lock();
+        if *lock >= 2 {
+            break;
+        }
+    }
+    println!("Mutex test run OK!");
+}
+
+/*
+fn raise_break_exception() {
+    unsafe {
+        core::arch::asm!("ebreak");
+        core::arch::asm!("nop");
+        core::arch::asm!("nop");
+    }
+}
+
+fn cooperative_preemptive() {
+    use core::sync::atomic::{AtomicUsize, Ordering};
+
+    static FLAG: AtomicUsize = AtomicUsize::new(0);
 
     thread::spawn(move || {
         println!("Spawned-thread is waiting ...");
@@ -35,14 +75,5 @@ fn main() {
         thread::yield_now();
     }
     println!("Preempt test run OK!");
-}
-
-/*
-fn raise_break_exception() {
-    unsafe {
-        core::arch::asm!("ebreak");
-        core::arch::asm!("nop");
-        core::arch::asm!("nop");
-    }
 }
 */
