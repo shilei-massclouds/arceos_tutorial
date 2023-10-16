@@ -28,8 +28,10 @@ OUT_DIR ?= target/$(TARGET)/release
 OUT_ELF := $(OUT_DIR)/$(APP_NAME)
 OUT_BIN := $(OUT_DIR)/$(APP_NAME).bin
 
-RUSTFLAGS := -C link-arg=-T$(LD_SCRIPT) -C link-arg=-no-pie
-export RUSTFLAGS
+ifeq ($(filter $(MAKECMDGOALS),test),)
+  RUSTFLAGS := -C link-arg=-T$(LD_SCRIPT) -C link-arg=-no-pie
+  export RUSTFLAGS
+endif
 
 all: build
 
@@ -53,6 +55,9 @@ $(OUT_ELF): FORCE
 	@printf "    $(GREEN_C)Building$(END_C) App: $(APP_NAME), Arch: riscv64, Platform: qemu-virt, App type: rust\n"
 	cargo build --manifest-path $(APP)/Cargo.toml --release \
 		--target $(TARGET) --target-dir $(CURDIR)/target $(FEATURES)
+
+test:
+	cargo test --workspace --exclude "axhal" --exclude "axorigin"
 
 clean:
 	@rm -rf ./target

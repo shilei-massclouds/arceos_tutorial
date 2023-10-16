@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 sbi-rt = { version = "0.0.2", features = ["legacy"] }
+riscv = "0.10"
+axconfig =  { path = "../axconfig" }
+page_table =  { path = "../page_table" }
