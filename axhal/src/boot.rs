@@ -1,8 +1,3 @@
-const TASK_STACK_SIZE: usize = 0x40000; // 256 K
-
-#[link_section = ".bss.stack"]
-static mut BOOT_STACK: [u8; TASK_STACK_SIZE] = [0; TASK_STACK_SIZE];
-
 #[no_mangle]
 #[link_section = ".text.boot"]
 unsafe extern "C" fn _start() -> ! {
@@ -12,9 +7,7 @@ unsafe extern "C" fn _start() -> ! {
         mv      s0, a0                  // save hartid
         mv      s1, a1                  // save DTB pointer
 
-        la      sp, {boot_stack}
-        li      t0, {boot_stack_size}
-        add     sp, sp, t0              // setup boot stack
+        la      sp, boot_stack_top      // setup boot stack
 
         call    {init_boot_page_table}
         call    {init_mmu}              // setup boot page table and enabel MMU
@@ -29,8 +22,6 @@ unsafe extern "C" fn _start() -> ! {
         add     a2, a2, s2              // readjust rust_entry address
         jalr    a2                      // call rust_entry(hartid, dtb)
         j       .",
-        boot_stack = sym BOOT_STACK,
-        boot_stack_size = const TASK_STACK_SIZE,
         init_boot_page_table = sym crate::paging::init_boot_page_table,
         init_mmu = sym crate::paging::init_mmu,
         phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,

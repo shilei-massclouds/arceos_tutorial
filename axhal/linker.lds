@@ -37,8 +37,7 @@ SECTIONS
 
     .bss : ALIGN(4K) {
         boot_stack = .;
-        *(.bss.stack)
-        . = ALIGN(4K);
+        . += 256K;
         boot_stack_top = .;
 
         _sbss = .;
