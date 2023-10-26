@@ -4,6 +4,15 @@ unsafe extern "C" fn _start() -> ! {
     // a0 = hartid
     // a1 = dtb
     core::arch::asm!("
+        la a3, _sbss                    // clear BSS
+        la a4, _ebss
+        ble a4, a3, 2f
+1:
+        sd zero, (a3)
+        add a3, a3, 8
+        blt a3, a4, 1b
+2:
+
         mv      s0, a0                  // save hartid
         mv      s1, a1                  // save DTB pointer
 
