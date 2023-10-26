@@ -57,7 +57,8 @@ $(OUT_ELF): FORCE
 		--target $(TARGET) --target-dir $(CURDIR)/target $(FEATURES)
 
 test:
-	cargo test --workspace --exclude "axhal" --exclude "axorigin" -- --nocapture
+	cargo test --workspace --exclude "axhal" --exclude "axruntime" \
+		--exclude "axorigin" -- --nocapture
 
 clean:
 	@rm -rf ./target
