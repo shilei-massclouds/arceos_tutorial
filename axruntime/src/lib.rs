@@ -45,5 +45,6 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         main();
     }
 
-    panic!("Never reach here!");
+    debug!("main task exited: exit_code={}", 0);
+    axhal::misc::terminate();
 }

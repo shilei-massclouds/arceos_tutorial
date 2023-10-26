@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 axconfig =  { path = "../axconfig" }
+axlog = { path = "../axlog" }
 page_table =  { path = "../page_table" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]

@@ -12,3 +12,10 @@ pub mod time {
         unimplemented!()
     }
 }
+
+pub mod misc {
+    /// Shutdown the whole system, including all CPUs.
+    pub fn terminate() -> ! {
+        unimplemented!()
+    }
+}
