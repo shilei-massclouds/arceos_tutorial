@@ -31,8 +31,8 @@ unsafe extern "C" fn _start() -> ! {
         add     a2, a2, s2              // readjust rust_entry address
         jalr    a2                      // call rust_entry(hartid, dtb)
         j       .",
-        init_boot_page_table = sym crate::paging::init_boot_page_table,
-        init_mmu = sym crate::paging::init_mmu,
+        init_boot_page_table = sym super::paging::init_boot_page_table,
+        init_mmu = sym super::paging::init_mmu,
         phys_virt_offset = const axconfig::PHYS_VIRT_OFFSET,
         entry = sym super::rust_entry,
         options(noreturn),

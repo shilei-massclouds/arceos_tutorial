@@ -1,15 +1,12 @@
 #![no_std]
 #![feature(asm_const)]
 
-mod boot;
-mod paging;
+#[cfg(target_arch = "riscv64")]
+mod riscv64;
+#[cfg(target_arch = "riscv64")]
+pub use self::riscv64::*;
 
-pub mod console;
-
-unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
-    extern "C" {
-        fn rust_main(hartid: usize, dtb: usize);
-    }
-
-    rust_main(hartid, dtb);
-}
+#[cfg(not(target_arch = "riscv64"))]
+mod dummy;
+#[cfg(not(target_arch = "riscv64"))]
+pub use self::dummy::*;

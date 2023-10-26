@@ -1,12 +1,13 @@
 #![no_std]
 
-#[cfg(not(test))]
+#[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
 
 #[no_mangle]
 pub extern "C" fn rust_main(_hartid: usize, _dtb: usize) -> ! {
     extern "C" {
         fn _skernel();
+        #[cfg(not(test))]
         fn main();
     }
 
@@ -15,6 +16,7 @@ pub extern "C" fn rust_main(_hartid: usize, _dtb: usize) -> ! {
     // requisition the higher part(1M) for early heap.
     axalloc::early_init(_skernel as usize - 0x100000, 0x100000);
 
+    #[cfg(not(test))]
     unsafe {
         main();
     }

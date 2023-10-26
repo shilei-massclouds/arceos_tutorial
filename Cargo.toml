@@ -3,8 +3,12 @@ resolver = "2"
 
 members = [
     "axorigin",
+    "axstd",
+    "axruntime",
     "axhal",
     "axconfig",
+    "axalloc",
+    "axsync",
     "page_table",
 ]
 

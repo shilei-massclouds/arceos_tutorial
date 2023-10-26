@@ -34,7 +34,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
     }
 }
 
-#[cfg_attr(not(test), global_allocator)]
+#[cfg_attr(all(target_os = "none", not(test)), global_allocator)]
 static GLOBAL_ALLOCATOR: GlobalAllocator = GlobalAllocator::new();
 
 pub fn early_init(start: usize, len: usize) {
