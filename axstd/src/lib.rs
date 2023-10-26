@@ -7,6 +7,7 @@ extern crate axruntime;
 mod macros;
 
 pub mod io;
+pub mod time;
 
 // Re-export String
 pub use alloc::string::String;

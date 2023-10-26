@@ -4,3 +4,11 @@ pub mod console {
         unimplemented!()
     }
 }
+
+pub mod time {
+    use core::time::Duration;
+    pub type TimeValue = Duration;
+    pub fn current_time() -> TimeValue {
+        unimplemented!()
+    }
+}
