@@ -10,6 +10,7 @@ members = [
     "axalloc",
     "axsync",
     "page_table",
+    "crate_interface",
 ]
 
 [profile.release]
