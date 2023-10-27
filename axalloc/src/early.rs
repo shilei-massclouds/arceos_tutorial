@@ -91,7 +91,7 @@ impl EarlyAllocator {
     fn used_bytes(&self) -> usize {
         self.b_pos - self.start
     }
-    fn available_bytes(&self) -> usize {
+    pub fn available_bytes(&self) -> usize {
         self.p_pos - self.b_pos
     }
 

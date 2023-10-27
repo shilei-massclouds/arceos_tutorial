@@ -22,6 +22,10 @@ impl GlobalAllocator {
     pub fn early_init(&self, start: usize, len: usize) {
         self.early_alloc.access().init(start, len)
     }
+
+    pub fn available_bytes(&self) -> usize {
+        self.early_alloc.access().available_bytes()
+    }
 }
 
 unsafe impl GlobalAlloc for GlobalAllocator {
@@ -39,4 +43,8 @@ static GLOBAL_ALLOCATOR: GlobalAllocator = GlobalAllocator::new();
 
 pub fn early_init(start: usize, len: usize) {
     GLOBAL_ALLOCATOR.early_init(start, len)
+}
+
+pub fn available_bytes() -> usize {
+    GLOBAL_ALLOCATOR.available_bytes()
 }
