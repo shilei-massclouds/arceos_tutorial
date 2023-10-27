@@ -5,6 +5,12 @@ mod lang_items;
 
 #[macro_use]
 extern crate axlog;
+extern crate alloc;
+
+use core::str;
+use alloc::string::String;
+use alloc::vec::Vec;
+use axdtb::util::SliceRead;
 
 struct LogIfImpl;
 
@@ -40,6 +46,18 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     // requisition the higher part(1M) for early heap.
     axalloc::early_init(_skernel as usize - 0x100000, 0x100000);
 
+    // Parse fdt for early memory info
+    let dtb_info = match parse_dtb(dtb.into()) {
+        Ok(info) => info,
+        Err(err) => panic!("Bad dtb {:?}", err),
+    };
+
+    info!("Memory: {:#x}, size: {:#x}", dtb_info.memory_addr, dtb_info.memory_size);
+    info!("Virtio_mmio[{}]:", dtb_info.mmio_regions.len());
+    for r in dtb_info.mmio_regions {
+        info!("\t{:#x}, size: {:#x}", r.0, r.1);
+    }
+
     #[cfg(not(test))]
     unsafe {
         main();
@@ -47,4 +65,68 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
     debug!("main task exited: exit_code={}", 0);
     axhal::misc::terminate();
+}
+
+struct DtbInfo {
+    memory_addr: usize,
+    memory_size: usize,
+    mmio_regions: Vec<(usize, usize)>,
+}
+
+fn parse_dtb(dtb_pa: usize) -> axdtb::DeviceTreeResult<DtbInfo> {
+    let dtb_va = axhal::mem::phys_to_virt(dtb_pa);
+    debug!("dtb: {:#x} => {:#x}", dtb_pa, dtb_va);
+
+    let mut memory_addr = 0;
+    let mut memory_size = 0;
+    let mut mmio_regions = Vec::new();
+
+    let mut cb = |name: String, addr_cells: usize, size_cells: usize, props: Vec<(String, Vec<u8>)>| {
+        debug!("{}: cells {}, {}", name, addr_cells, size_cells);
+        let mut is_memory = false;
+        let mut is_mmio = false;
+        let mut reg = None;
+        for prop in props {
+            match prop.0.as_str() {
+                "device_type" => {
+                    is_memory = str::from_utf8(&(prop.1))
+                        .map_or_else(|_| false, |v| v == "memory\0");
+                },
+                "compatible" => {
+                    is_mmio = str::from_utf8(&(prop.1))
+                        .map_or_else(|_| false, |v| v == "virtio,mmio\0");
+                },
+                "reg" => {
+                    reg = Some(prop.1);
+                },
+                _ => (),
+            }
+        }
+        if is_memory {
+            assert!(addr_cells == 2);
+            assert!(size_cells == 2);
+            if let Some(ref reg) = reg {
+                memory_addr = reg.as_slice().read_be_u64(0).unwrap() as usize;
+                memory_size = reg.as_slice().read_be_u64(8).unwrap() as usize;
+            }
+        }
+        if is_mmio {
+            assert!(addr_cells == 2);
+            assert!(size_cells == 2);
+            if let Some(ref reg) = reg {
+                let addr = reg.as_slice().read_be_u64(0).unwrap() as usize;
+                let size = reg.as_slice().read_be_u64(8).unwrap() as usize;
+                mmio_regions.push((addr, size));
+            }
+        }
+    };
+
+    let dt = axdtb::DeviceTree::init(dtb_va.into())?;
+    dt.parse(dt.off_struct, 0, 0, &mut cb)?;
+
+    Ok(DtbInfo {
+        memory_addr,
+        memory_size,
+        mmio_regions,
+    })
 }

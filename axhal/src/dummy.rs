@@ -19,3 +19,9 @@ pub mod misc {
         unimplemented!()
     }
 }
+
+pub mod mem {
+    pub const fn phys_to_virt(_pa: usize) -> usize {
+        0
+    }
+}

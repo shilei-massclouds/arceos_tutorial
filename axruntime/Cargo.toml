@@ -8,5 +8,6 @@ edition = "2021"
 [dependencies]
 axhal = { path = "../axhal" }
 axlog = { path = "../axlog" }
+axdtb = { path = "../axdtb" }
 crate_interface = { path = "../crate_interface" }
 axalloc = { path = "../axalloc" }
