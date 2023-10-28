@@ -1,16 +1,8 @@
 #![allow(dead_code)]
 use core::alloc::Layout;
-use axconfig::PAGE_SIZE;
+use axconfig::{PAGE_SIZE, align_up, align_down};
 
 extern crate alloc;
-
-const fn align_up(val: usize, align: usize) -> usize {
-    (val + align - 1) & !(align - 1)
-}
-
-const fn align_down(val: usize, align: usize) -> usize {
-    (val) & !(align - 1)
-}
 
 /// Early memory allocator
 /// Use it before formal bytes-allocator and pages-allocator can work!
