@@ -1,10 +1,11 @@
 #![no_std]
 
-mod early;
-
+use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
-use crate::early::EarlyAllocator;
+use allocator::{BaseAllocator, ByteAllocator, EarlyAllocator};
 use axsync::BootCell;
+
+extern crate alloc;
 
 struct GlobalAllocator {
     early_alloc: BootCell<EarlyAllocator>,
@@ -30,11 +31,19 @@ impl GlobalAllocator {
 
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        self.early_alloc.access().alloc(layout)
+        if let Ok(ptr) = self.early_alloc.access().alloc(layout) {
+            ptr.as_ptr()
+        } else {
+            alloc::alloc::handle_alloc_error(layout)
+        }
+
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        self.early_alloc.access().dealloc(ptr, layout)
+        self.early_alloc.access().dealloc(
+            NonNull::new(ptr).expect("dealloc null ptr"),
+            layout
+        )
     }
 }
 

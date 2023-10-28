@@ -1,5 +1,5 @@
 [package]
-name = "axalloc"
+name = "allocator"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,3 @@ edition = "2021"
 
 [dependencies]
 axconfig = { path = "../axconfig" }
-axsync = { path = "../axsync" }
-allocator = { path = "../allocator" }

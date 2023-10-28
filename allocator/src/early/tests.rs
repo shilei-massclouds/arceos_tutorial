@@ -1,5 +1,6 @@
 use core::alloc::Layout;
 use super::EarlyAllocator;
+use super::{BaseAllocator, ByteAllocator};
 use super::alloc;
 use axconfig::PAGE_SIZE;
 
@@ -15,13 +16,13 @@ fn test_alloc_bytes() {
     assert_eq!(early.used_bytes(), 0);
 
     let layout = Layout::from_size_align(2, 2).unwrap();
-    let p0 = early.alloc_bytes(layout);
-    assert_eq!(p0 as usize - base, 0);
+    let p0 = early.alloc_bytes(layout).unwrap();
+    assert_eq!(p0.as_ptr() as usize - base, 0);
     assert_eq!(early.used_bytes(), 2);
 
     let layout = Layout::from_size_align(4, 4).unwrap();
-    let p1 = early.alloc_bytes(layout);
-    assert_eq!(p1 as usize - base, 4);
+    let p1 = early.alloc_bytes(layout).unwrap();
+    assert_eq!(p1.as_ptr() as usize - base, 4);
     assert_eq!(early.used_bytes(), 8);
 
     early.dealloc(p0, Layout::new::<usize>());
@@ -47,12 +48,12 @@ fn test_alloc_pages() {
     assert_eq!(early.used_pages(), 0);
 
     let layout = Layout::from_size_align(PAGE_SIZE, PAGE_SIZE).unwrap();
-    let p0 = early.alloc_pages(layout);
-    assert_eq!(p0 as usize, end - PAGE_SIZE);
+    let p0 = early.alloc_pages(layout).unwrap();
+    assert_eq!(p0.as_ptr() as usize, end - PAGE_SIZE);
     assert_eq!(early.used_pages(), 1);
 
     let layout = Layout::from_size_align(PAGE_SIZE*2, PAGE_SIZE).unwrap();
-    let p1 = early.alloc_pages(layout);
-    assert_eq!(p1 as usize, end - PAGE_SIZE*3);
+    let p1 = early.alloc_pages(layout).unwrap();
+    assert_eq!(p1.as_ptr() as usize, end - PAGE_SIZE*3);
     assert_eq!(early.used_pages(), 3);
 }
