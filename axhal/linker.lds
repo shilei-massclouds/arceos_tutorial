@@ -30,10 +30,9 @@ SECTIONS
         *(.data .data.*)
         *(.sdata .sdata.*)
         *(.got .got.*)
+        . = ALIGN(4K);
+        _edata = .;
     }
-
-    . = ALIGN(4K);
-    _edata = .;
 
     .bss : ALIGN(4K) {
         boot_stack = .;

@@ -3,14 +3,12 @@
 #[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate axlog;
 extern crate alloc;
 
 use core::str;
-use alloc::string::String;
-use alloc::vec::Vec;
-use axdtb::util::SliceRead;
 
 struct LogIfImpl;
 
@@ -26,6 +24,7 @@ impl axlog::LogIf for LogIfImpl {
 }
 
 #[no_mangle]
+#[cfg(all(target_os = "none", not(test)))]
 pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     extern "C" {
         fn _skernel();
@@ -54,9 +53,12 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
     info!("Memory: {:#x}, size: {:#x}", dtb_info.memory_addr, dtb_info.memory_size);
     info!("Virtio_mmio[{}]:", dtb_info.mmio_regions.len());
-    for r in dtb_info.mmio_regions {
+    for r in &dtb_info.mmio_regions {
         info!("\t{:#x}, size: {:#x}", r.0, r.1);
     }
+
+    info!("Initialize kernel page table...");
+    remap_kernel_memory(dtb_info);
 
     info!("Heap available: {}K.", axalloc::available_bytes()/1024);
 
@@ -69,14 +71,60 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     axhal::misc::terminate();
 }
 
+#[cfg(all(target_os = "none", not(test)))]
+fn remap_kernel_memory(dtb: DtbInfo) {
+    use axhal::mem::{MemRegion, kernel_image_regions, free_regions};
+    use page_table::{PAGE_KERNEL_RW, PageTable};
+    use axconfig::{phys_to_virt, SIZE_2M};
+    use axsync::BootOnceCell;
+
+    let mmio_regions = dtb.mmio_regions.iter().map(|reg| MemRegion {
+        paddr: reg.0.into(),
+        size: reg.1,
+        flags: PAGE_KERNEL_RW,
+        name: "mmio",
+    });
+
+    let regions = kernel_image_regions()
+        .chain(free_regions(dtb.memory_size))
+        .chain(mmio_regions);
+
+    let mut kernel_page_table = PageTable::alloc_table(0);
+    for r in regions {
+        let _ = kernel_page_table.map(
+            phys_to_virt(r.paddr),
+            r.paddr,
+            r.size,
+            SIZE_2M,
+            r.flags,
+        );
+    }
+
+    static KERNEL_PAGE_TABLE: BootOnceCell<PageTable> =
+        unsafe { BootOnceCell::new() };
+
+    KERNEL_PAGE_TABLE.init(kernel_page_table);
+
+    unsafe {
+        axhal::paging::write_page_table_root(KERNEL_PAGE_TABLE.get().root_paddr())
+    };
+}
+
+#[cfg(all(target_os = "none", not(test)))]
 struct DtbInfo {
     memory_addr: usize,
     memory_size: usize,
-    mmio_regions: Vec<(usize, usize)>,
+    mmio_regions: alloc::vec::Vec<(usize, usize)>,
 }
 
+#[cfg(all(target_os = "none", not(test)))]
 fn parse_dtb(dtb_pa: usize) -> axdtb::DeviceTreeResult<DtbInfo> {
-    let dtb_va = axhal::mem::phys_to_virt(dtb_pa);
+    use alloc::string::String;
+    use alloc::vec::Vec;
+    use axconfig::phys_to_virt;
+    use axdtb::util::SliceRead;
+
+    let dtb_va = phys_to_virt(dtb_pa);
     debug!("dtb: {:#x} => {:#x}", dtb_pa, dtb_va);
 
     let mut memory_addr = 0;

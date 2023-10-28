@@ -1,6 +1,6 @@
 mod boot;
-mod paging;
 
+pub mod paging;
 pub mod console;
 pub mod time;
 pub mod misc;
