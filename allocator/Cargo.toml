@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 axconfig = { path = "../axconfig" }
 bitmap-allocator = { path = "../bitmap-allocator" }
+buddy_system_allocator = { path = "../buddy_system_allocator", default-features = false }

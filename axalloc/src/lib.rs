@@ -2,8 +2,8 @@
 
 use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
-use allocator::{BaseAllocator, ByteAllocator, PageAllocator};
-use allocator::{EarlyAllocator, BitmapPageAllocator, AllocResult};
+use allocator::{BaseAllocator, ByteAllocator, PageAllocator, AllocResult};
+use allocator::{EarlyAllocator, BitmapPageAllocator, BuddyByteAllocator};
 use axsync::BootCell;
 
 extern crate alloc;
@@ -13,7 +13,8 @@ const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
 
 struct GlobalAllocator {
     early_alloc: BootCell<EarlyAllocator>,
-    page_alloc: BootCell<BitmapPageAllocator>
+    page_alloc: BootCell<BitmapPageAllocator>,
+    byte_alloc: BootCell<BuddyByteAllocator>,
 }
 
 impl GlobalAllocator {
@@ -25,6 +26,9 @@ impl GlobalAllocator {
             page_alloc: unsafe {
                 BootCell::new(BitmapPageAllocator::new())
             },
+            byte_alloc: unsafe {
+                BootCell::new(BuddyByteAllocator::new())
+            },
         }
     }
 
@@ -34,18 +38,16 @@ impl GlobalAllocator {
 
     pub fn final_init(&self, start: usize, size: usize) {
         assert!(size > MIN_HEAP_SIZE);
-        //let layout = Layout::from_size_align(MIN_HEAP_SIZE, PAGE_SIZE).unwrap();
+        let layout = Layout::from_size_align(MIN_HEAP_SIZE, PAGE_SIZE).unwrap();
         self.page_alloc.access().init(start, size);
+        let heap_ptr = self.alloc_pages(layout) as usize;
+        self.byte_alloc.access().init(heap_ptr, MIN_HEAP_SIZE);
         self.early_alloc.access().disable();
-        //let heap_ptr = self.alloc_pages(layout) as usize;
-        //self.byte_alloc.access().init(heap_ptr, MIN_HEAP_SIZE);
     }
 
-    /*
     pub fn final_add_memory(&self, start: usize, size: usize) -> AllocResult {
         self.byte_alloc.access().add_memory(start, size)
     }
-    */
 
     pub fn total_bytes(&self) -> usize {
         self.early_alloc.access().total_bytes()
@@ -83,7 +85,6 @@ impl GlobalAllocator {
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
-        /*
         if self.byte_alloc.access().total_bytes() > 0 {
             if let Ok(ptr) = self.byte_alloc.access().alloc(layout) {
                 return ptr.as_ptr();
@@ -91,7 +92,6 @@ impl GlobalAllocator {
                 alloc::alloc::handle_alloc_error(layout)
             }
         }
-        */
         self.early_alloc(layout)
     }
 
@@ -125,7 +125,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                     num
                 )
             } else {
-                self.early_alloc.access().dealloc(
+                self.byte_alloc.access().dealloc(
                     NonNull::new(ptr).expect("dealloc null ptr"),
                     layout
                 )

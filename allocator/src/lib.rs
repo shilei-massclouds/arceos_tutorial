@@ -2,14 +2,16 @@
 #![feature(result_option_inspect)]
 
 mod early;
+pub use early::EarlyAllocator;
+
+mod buddy;
+pub use buddy::BuddyByteAllocator;
 
 mod bitmap;
 pub use bitmap::BitmapPageAllocator;
 
 use core::ptr::NonNull;
 use core::alloc::Layout;
-
-pub use early::EarlyAllocator;
 
 /// The error type used for allocation.
 #[derive(Debug)]
