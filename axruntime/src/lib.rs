@@ -58,9 +58,15 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     }
 
     info!("Initialize kernel page table...");
-    remap_kernel_memory(dtb_info);
+    remap_kernel_memory(&dtb_info);
 
-    info!("Heap available: {}K.", axalloc::available_bytes()/1024);
+    info!("Heap total: {}K, avail: {}K, used: {}K ({} pages)",
+          axalloc::total_bytes()/1024,
+          axalloc::available_bytes()/1024,
+          axalloc::used_bytes()/1024,
+          axalloc::used_pages());
+
+    allocator_final_init(dtb_info.memory_addr + dtb_info.memory_size);
 
     #[cfg(not(test))]
     unsafe {
@@ -72,7 +78,19 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 }
 
 #[cfg(all(target_os = "none", not(test)))]
-fn remap_kernel_memory(dtb: DtbInfo) {
+fn allocator_final_init(memory_size: usize) {
+    use alloc::vec::Vec;
+    use axhal::mem::{free_regions, MemRegion};
+    use axconfig::{phys_to_virt, SIZE_2M};
+
+    for r in free_regions(memory_size) {
+        axalloc::final_init(phys_to_virt(r.paddr), r.size);
+        break;
+    }
+}
+
+#[cfg(all(target_os = "none", not(test)))]
+fn remap_kernel_memory(dtb: &DtbInfo) {
     use axhal::mem::{MemRegion, kernel_image_regions, free_regions};
     use page_table::{PAGE_KERNEL_RW, PageTable};
     use axconfig::{phys_to_virt, SIZE_2M};

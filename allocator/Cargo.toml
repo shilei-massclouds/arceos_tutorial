@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 axconfig = { path = "../axconfig" }
+bitmap-allocator = { path = "../bitmap-allocator" }

@@ -25,11 +25,12 @@ pub struct EarlyAllocator {
     count:  usize,
     b_pos:  usize,
     p_pos:  usize,
+    disabled: bool,
 }
 
 impl EarlyAllocator {
     pub const fn new() -> Self {
-        Self { start: 0, end: 0, count: 0, b_pos: 0, p_pos: 0 }
+        Self { start: 0, end: 0, count: 0, b_pos: 0, p_pos: 0, disabled: false }
     }
 
     pub fn alloc_bytes(&mut self, layout: Layout) -> AllocResult<NonNull<u8>> {
@@ -59,13 +60,20 @@ impl EarlyAllocator {
     fn total_pages(&self) -> usize {
         (self.end - self.start) / PAGE_SIZE
     }
-    #[cfg(test)]
-    fn used_pages(&self) -> usize {
+    pub fn used_pages(&self) -> usize {
         (self.end - self.p_pos) / PAGE_SIZE
     }
     #[cfg(test)]
     fn available_pages(&self) -> usize {
         (self.p_pos - self.b_pos) / PAGE_SIZE
+    }
+
+    pub fn disable(&mut self) {
+        self.disabled = true;
+    }
+
+    pub fn disabled(&self) -> bool {
+        self.disabled
     }
 }
 

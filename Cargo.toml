@@ -12,6 +12,7 @@ members = [
     "axlog",
     "page_table",
     "crate_interface",
+    "bitmap-allocator",
 ]
 
 [profile.release]
