@@ -79,9 +79,8 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
 #[cfg(all(target_os = "none", not(test)))]
 fn allocator_final_init(memory_size: usize) {
-    use alloc::vec::Vec;
-    use axhal::mem::{free_regions, MemRegion};
-    use axconfig::{phys_to_virt, SIZE_2M};
+    use axhal::mem::free_regions;
+    use axconfig::phys_to_virt;
 
     for r in free_regions(memory_size) {
         axalloc::final_init(phys_to_virt(r.paddr), r.size);

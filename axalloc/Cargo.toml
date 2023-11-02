@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 axconfig = { path = "../axconfig" }
+log = "0.4"
 axsync = { path = "../axsync" }
 allocator = { path = "../allocator" }

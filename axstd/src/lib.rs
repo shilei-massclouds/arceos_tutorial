@@ -11,3 +11,4 @@ pub mod time;
 
 // Re-export String
 pub use alloc::string::String;
+pub use alloc::vec::Vec;
