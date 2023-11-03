@@ -9,4 +9,5 @@ edition = "2021"
 axconfig = { path = "../axconfig" }
 log = "0.4"
 axsync = { path = "../axsync" }
+spinlock = { path = "../spinlock" }
 allocator = { path = "../allocator" }

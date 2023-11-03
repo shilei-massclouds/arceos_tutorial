@@ -4,7 +4,7 @@ use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
 use allocator::{BaseAllocator, ByteAllocator, PageAllocator};
 use allocator::{EarlyAllocator, BitmapPageAllocator, BuddyByteAllocator};
-use axsync::BootCell;
+use spinlock::SpinRaw;
 
 #[macro_use]
 extern crate log;
@@ -14,57 +14,51 @@ const PAGE_SIZE: usize = 4096;
 const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
 
 struct GlobalAllocator {
-    early_alloc: BootCell<EarlyAllocator>,
-    page_alloc: BootCell<BitmapPageAllocator>,
-    byte_alloc: BootCell<BuddyByteAllocator>,
+    early_alloc: SpinRaw<EarlyAllocator>,
+    byte_alloc: SpinRaw<BuddyByteAllocator>,
+    page_alloc: SpinRaw<BitmapPageAllocator>
 }
 
 impl GlobalAllocator {
     pub const fn new() -> Self {
         Self {
-            early_alloc: unsafe {
-                BootCell::new(EarlyAllocator::new())
-            },
-            page_alloc: unsafe {
-                BootCell::new(BitmapPageAllocator::new())
-            },
-            byte_alloc: unsafe {
-                BootCell::new(BuddyByteAllocator::new())
-            },
+            early_alloc: SpinRaw::new(EarlyAllocator::new()),
+            byte_alloc: SpinRaw::new(BuddyByteAllocator::new()),
+            page_alloc: SpinRaw::new(BitmapPageAllocator::new()),
         }
     }
 
     pub fn early_init(&self, start: usize, size: usize) {
-        self.early_alloc.access().init(start, size)
+        self.early_alloc.lock().init(start, size)
     }
 
     pub fn final_init(&self, start: usize, size: usize) {
         assert!(size > MIN_HEAP_SIZE);
         let layout = Layout::from_size_align(MIN_HEAP_SIZE, PAGE_SIZE).unwrap();
-        self.page_alloc.access().init(start, size);
+        self.page_alloc.lock().init(start, size);
         let heap_ptr = self.alloc_pages(layout) as usize;
-        self.byte_alloc.access().init(heap_ptr, MIN_HEAP_SIZE);
-        self.early_alloc.access().disable();
+        self.byte_alloc.lock().init(heap_ptr, MIN_HEAP_SIZE);
+        self.early_alloc.lock().disable();
     }
 
     pub fn total_bytes(&self) -> usize {
-        self.early_alloc.access().total_bytes()
+        self.early_alloc.lock().total_bytes()
     }
 
     pub fn available_bytes(&self) -> usize {
-        self.early_alloc.access().available_bytes()
+        self.early_alloc.lock().available_bytes()
     }
 
     pub fn used_bytes(&self) -> usize {
-        let alloc = self.early_alloc.access();
+        let alloc = self.early_alloc.lock();
         alloc.used_bytes() + (alloc.used_pages() * PAGE_SIZE)
     }
 
     pub fn used_pages(&self) -> usize {
-        if self.page_alloc.access().total_pages() > 0 {
-            self.page_alloc.access().used_pages()
+        if self.page_alloc.lock().total_pages() > 0 {
+            self.page_alloc.lock().used_pages()
         } else {
-            self.early_alloc.access().used_pages()
+            self.early_alloc.lock().used_pages()
         }
     }
 
@@ -72,8 +66,8 @@ impl GlobalAllocator {
         assert!(layout.align() % PAGE_SIZE == 0);
         assert!(layout.size() % PAGE_SIZE == 0);
         let num = layout.size() / PAGE_SIZE;
-        if self.page_alloc.access().total_pages() > 0 {
-            if let Ok(ptr) = self.page_alloc.access().alloc_pages(num, layout.align()) {
+        if self.page_alloc.lock().total_pages() > 0 {
+            if let Ok(ptr) = self.page_alloc.lock().alloc_pages(num, layout.align()) {
                 return ptr as *mut u8;
             } else {
                 alloc::alloc::handle_alloc_error(layout)
@@ -83,12 +77,12 @@ impl GlobalAllocator {
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
-        if self.byte_alloc.access().total_bytes() == 0 {
+        if self.byte_alloc.lock().total_bytes() == 0 {
             return self.early_alloc(layout);
         }
 
         loop {
-            let mut balloc = self.byte_alloc.access();
+            let mut balloc = self.byte_alloc.lock();
             if let Ok(ptr) = balloc.alloc(layout) {
                 return ptr.as_ptr();
             } else {
@@ -111,7 +105,7 @@ impl GlobalAllocator {
 
     fn early_alloc(&self, layout: Layout) -> *mut u8 {
         // Final allocator hasn't initialized yet, use early allocator.
-        if let Ok(ptr) = self.early_alloc.access().alloc(layout) {
+        if let Ok(ptr) = self.early_alloc.lock().alloc(layout) {
             ptr.as_ptr()
         } else {
             alloc::alloc::handle_alloc_error(layout)
@@ -129,21 +123,21 @@ unsafe impl GlobalAlloc for GlobalAllocator {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if self.early_alloc.access().disabled() {
+        if self.early_alloc.lock().disabled() {
             if layout.size() % PAGE_SIZE == 0 {
                 let num = layout.size() >> axconfig::PAGE_SHIFT;
-                self.page_alloc.access().dealloc_pages(
+                self.page_alloc.lock().dealloc_pages(
                     ptr as usize,
                     num
                 )
             } else {
-                self.byte_alloc.access().dealloc(
+                self.byte_alloc.lock().dealloc(
                     NonNull::new(ptr).expect("dealloc null ptr"),
                     layout
                 )
             }
         } else {
-            self.early_alloc.access().dealloc(
+            self.early_alloc.lock().dealloc(
                 NonNull::new(ptr).expect("dealloc null ptr"),
                 layout
             )
