@@ -1,5 +1,4 @@
 use alloc::collections::VecDeque;
-use alloc::sync::Arc;
 use spinlock::SpinRaw;
 use crate::{AxTaskRef, run_queue::RUN_QUEUE};
 use crate::task::{current, CurrentTask};

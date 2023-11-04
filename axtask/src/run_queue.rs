@@ -4,7 +4,6 @@ use crate::task::{CurrentTask, TaskState, Task};
 use alloc::sync::Arc;
 use alloc::collections::VecDeque;
 use crate::task::current;
-use axconfig::PAGE_SIZE;
 use axsync::BootOnceCell;
 
 static EXITED_TASKS: SpinRaw<VecDeque<AxTaskRef>> = SpinRaw::new(VecDeque::new());
@@ -97,7 +96,7 @@ impl AxRunQueue {
         }
         unreachable!("task exited!");
     }
-    pub fn unblock_task(&mut self, task: AxTaskRef, resched: bool) {
+    pub fn unblock_task(&mut self, task: AxTaskRef, _resched: bool) {
         debug!("task unblock: {}", task.name());
         if task.is_blocked() {
             task.set_state(TaskState::Ready);

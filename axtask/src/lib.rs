@@ -34,3 +34,7 @@ pub fn init_scheduler() {
 pub fn exit(exit_code: i32) -> ! {
     run_queue::RUN_QUEUE.lock().exit_current(exit_code)
 }
+
+pub fn yield_now() {
+    run_queue::RUN_QUEUE.lock().yield_current();
+}
