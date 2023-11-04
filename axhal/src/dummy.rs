@@ -25,3 +25,22 @@ pub mod mem {
         0
     }
 }
+
+pub mod context {
+    pub struct TaskContext;
+
+    impl TaskContext {
+        pub const fn new() -> Self {
+            Self
+        }
+
+        pub fn init(&mut self, _entry: usize, _kstack_top: usize) {
+            unimplemented!();
+        }
+
+        pub fn switch_to(&mut self, _next_ctx: &Self) {
+            unimplemented!();
+        }
+    }
+}
+pub use context::{TaskContext};

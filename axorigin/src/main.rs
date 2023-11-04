@@ -12,6 +12,8 @@ pub fn main() {
 
     try_alloc_bulk();
 
+    axtask::test_switch_context();
+
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());
 }

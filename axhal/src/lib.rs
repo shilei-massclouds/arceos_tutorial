@@ -1,5 +1,7 @@
 #![no_std]
 #![feature(asm_const)]
+#![feature(naked_functions)]
+#![feature(const_maybe_uninit_zeroed)]
 
 #[cfg(target_arch = "riscv64")]
 mod riscv64;

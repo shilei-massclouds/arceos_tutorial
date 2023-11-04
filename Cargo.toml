@@ -9,6 +9,7 @@ members = [
     "axconfig",
     "axalloc",
     "axsync",
+    "axtask",
     "axlog",
     "page_table",
     "crate_interface",
