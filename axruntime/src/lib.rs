@@ -68,6 +68,8 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
 
     allocator_final_init(dtb_info.memory_addr + dtb_info.memory_size);
 
+    axtask::init_scheduler();
+
     #[cfg(not(test))]
     unsafe {
         main();

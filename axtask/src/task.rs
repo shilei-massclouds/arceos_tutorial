@@ -2,18 +2,37 @@ use core::ops::Deref;
 use core::mem::ManuallyDrop;
 use core::{alloc::Layout, cell::UnsafeCell, ptr::NonNull};
 use alloc::{boxed::Box, string::String, sync::Arc};
-use core::sync::atomic::{AtomicU8, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicU8, AtomicI32, AtomicU64, Ordering};
 use axconfig::{PAGE_SIZE, align_up};
 use axhal::TaskContext;
+use crate::WaitQueue;
+use crate::run_queue::AxRunQueue;
 
 pub type AxTaskRef = Arc<Task>;
 
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub struct TaskId(u64);
+
+impl TaskId {
+    fn new() -> Self {
+        static ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+        Self(ID_COUNTER.fetch_add(1, Ordering::Relaxed))
+    }
+    pub const fn as_u64(&self) -> u64 {
+        self.0
+    }
+}
+
 pub struct Task {
+    id: TaskId,
     name: String,
     is_idle: bool,
     is_init: bool,
     entry: Option<*mut dyn FnOnce()>,
     state: AtomicU8,
+    in_wait_queue: AtomicBool,
+    exit_code: AtomicI32,
+    wait_for_exit: WaitQueue,
     kstack: Option<TaskStack>,
     ctx: UnsafeCell<TaskContext>,
 }
@@ -76,32 +95,43 @@ impl Drop for TaskStack {
 }
 
 impl Task {
+    pub const fn id(&self) -> TaskId {
+        self.id
+    }
     pub fn name(&self) -> &str {
         self.name.as_str()
+    }
+    pub fn join(&self) -> Option<i32> {
+        self.wait_for_exit.wait_until(|| self.state() == TaskState::Exited);
+        Some(self.exit_code.load(Ordering::Acquire))
     }
 }
 
 impl Task {
-    fn new_common(name: String) -> Self {
+    fn new_common(id: TaskId, name: String) -> Self {
         Self {
+            id,
             name,
             is_idle: false,
             is_init: false,
             entry: None,
             state: AtomicU8::new(TaskState::Ready as u8),
+            in_wait_queue: AtomicBool::new(false),
+            exit_code: AtomicI32::new(0),
+            wait_for_exit: WaitQueue::new(),
             kstack: None,
             ctx: UnsafeCell::new(TaskContext::new()),
         }
     }
 
     /// Create a new task with the given entry function and stack size.
-    pub(crate) fn new<F>(entry: F, name: String) -> AxTaskRef
+    pub(crate) fn new<F>(entry: F, name: String, stack_size: usize) -> AxTaskRef
     where
         F: FnOnce() + 'static,
     {
-        let mut t = Self::new_common(name);
+        let mut t = Self::new_common(TaskId::new(), name);
         debug!("new task: {}", t.name());
-        let kstack = TaskStack::alloc(align_up(PAGE_SIZE, PAGE_SIZE));
+        let kstack = TaskStack::alloc(align_up(stack_size, PAGE_SIZE));
 
         t.entry = Some(Box::into_raw(Box::new(entry)));
         t.ctx.get_mut().init(task_entry as usize, kstack.top());
@@ -113,7 +143,7 @@ impl Task {
     }
 
     pub(crate) fn new_init(name: String) -> AxTaskRef {
-        let mut t = Self::new_common(name);
+        let mut t = Self::new_common(TaskId::new(), name);
         t.is_init = true;
         if t.name == "idle" {
             t.is_idle = true;
@@ -139,6 +169,27 @@ impl Task {
     #[inline]
     pub(crate) const fn is_idle(&self) -> bool {
         self.is_idle
+    }
+    #[inline]
+    pub(crate) const fn is_init(&self) -> bool {
+        self.is_init
+    }
+    #[inline]
+    pub(crate) fn is_blocked(&self) -> bool {
+        matches!(self.state(), TaskState::Blocked)
+    }
+    #[inline]
+    pub(crate) fn in_wait_queue(&self) -> bool {
+        self.in_wait_queue.load(Ordering::Acquire)
+    }
+    #[inline]
+    pub(crate) fn set_in_wait_queue(&self, in_wait_queue: bool) {
+        self.in_wait_queue.store(in_wait_queue, Ordering::Release);
+    }
+
+    pub(crate) fn notify_exit(&self, exit_code: i32, rq: &mut AxRunQueue) {
+        self.exit_code.store(exit_code, Ordering::Release);
+        self.wait_for_exit.notify_all_locked(false, rq);
     }
 
     #[inline]
@@ -194,5 +245,5 @@ extern "C" fn task_entry() -> ! {
     if let Some(entry) = task.entry {
         unsafe { Box::from_raw(entry)() };
     }
-    loop {}
+    crate::exit(0);
 }

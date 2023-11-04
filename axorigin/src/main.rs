@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use axstd::{println, String, time, Vec};
+use axstd::{println, String, time, Vec, thread};
 
 #[no_mangle]
 pub fn main() {
@@ -12,7 +12,7 @@ pub fn main() {
 
     try_alloc_bulk();
 
-    axtask::init_sched();
+    try_multitask();
 
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());
@@ -25,4 +25,15 @@ fn try_alloc_bulk() {
         v.push(i);
     }
     println!("Alloc bulk memory ok!\n");
+}
+
+fn try_multitask() {
+    println!("Start task...");
+
+    let computation = thread::spawn(|| {
+        42
+    });
+
+    let result = computation.join().unwrap();
+    println!("Task gets result: {result}");
 }

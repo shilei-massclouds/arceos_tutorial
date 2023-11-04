@@ -1,11 +1,17 @@
 use spinlock::SpinRaw;
-use crate::AxTaskRef;
+use crate::{AxTaskRef, WaitQueue};
 use crate::task::{CurrentTask, TaskState, Task};
 use alloc::sync::Arc;
 use alloc::collections::VecDeque;
 use crate::task::current;
+use axconfig::PAGE_SIZE;
+use axsync::BootOnceCell;
+
+static EXITED_TASKS: SpinRaw<VecDeque<AxTaskRef>> = SpinRaw::new(VecDeque::new());
+static WAIT_FOR_EXIT: WaitQueue = WaitQueue::new();
 
 pub(crate) static RUN_QUEUE: SpinRaw<AxRunQueue> = SpinRaw::new(AxRunQueue::new());
+static IDLE_TASK: BootOnceCell<AxTaskRef> = unsafe { BootOnceCell::new() };
 
 pub(crate) struct AxRunQueue {
     ready_queue: VecDeque<Arc<Task>>,
@@ -17,6 +23,8 @@ impl AxRunQueue {
     }
 
     pub fn add_task(&mut self, task: AxTaskRef) {
+        debug!("task spawn: {}", task.name());
+        //assert!(task.is_ready());
         self.ready_queue.push_back(task);
     }
 
@@ -60,24 +68,61 @@ impl AxRunQueue {
             (*prev_ctx_ptr).switch_to(&*next_ctx_ptr);
         }
     }
+    pub fn block_current<F>(&mut self, wait_queue_push: F)
+    where
+        F: FnOnce(AxTaskRef),
+    {
+        let curr = current();
+        assert!(curr.is_running());
+        assert!(!curr.is_idle());
+
+        curr.set_state(TaskState::Blocked);
+        wait_queue_push(curr.clone());
+        self.resched(false);
+    }
+    pub fn exit_current(&mut self, exit_code: i32) -> ! {
+        let curr = current();
+        debug!("task exit: {}, exit_code={}", curr.name(), exit_code);
+        assert!(curr.is_running());
+        assert!(!curr.is_idle());
+        if curr.is_init() {
+            EXITED_TASKS.lock().clear();
+            axhal::misc::terminate();
+        } else {
+            curr.set_state(TaskState::Exited);
+            curr.notify_exit(exit_code, self);
+            EXITED_TASKS.lock().push_back(curr.clone());
+            WAIT_FOR_EXIT.notify_one_locked(false, self);
+            self.resched(false);
+        }
+        unreachable!("task exited!");
+    }
+    pub fn unblock_task(&mut self, task: AxTaskRef, resched: bool) {
+        debug!("task unblock: {}", task.name());
+        if task.is_blocked() {
+            task.set_state(TaskState::Ready);
+            self.add_task(task); // TODO: priority
+        }
+    }
 }
 
 pub(crate) fn init() {
-    let busy_task = Task::new(|| run_busy(), "NOT busy".into());
-    RUN_QUEUE.lock().add_task(busy_task);
+    const IDLE_TASK_STACK_SIZE: usize = 4096;
+    let idle_task = Task::new(|| run_idle(), "idle".into(), IDLE_TASK_STACK_SIZE);
+    IDLE_TASK.init(idle_task.clone());
 
     let main_task = Task::new_init("main".into());
     main_task.set_state(TaskState::Running);
-    unsafe { CurrentTask::init_current(main_task) }
 
-    info!("Try switch task ...");
-    RUN_QUEUE.lock().yield_current();
-    info!("Switch task ok!");
+    unsafe { CurrentTask::init_current(main_task) }
 }
 
-pub fn run_busy() -> ! {
+pub fn yield_now() {
+    RUN_QUEUE.lock().yield_current();
+}
+
+pub fn run_idle() -> ! {
     loop {
-        info!("I'm NOT idle!");
-        RUN_QUEUE.lock().yield_current();
+        yield_now();
     }
 }

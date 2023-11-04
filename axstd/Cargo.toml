@@ -9,3 +9,5 @@ edition = "2021"
 spinlock = { path = "../spinlock" }
 axhal = { path = "../axhal" }
 axruntime = { path = "../axruntime" }
+axconfig = { path = "../axconfig" }
+axtask = { path = "../axtask" }

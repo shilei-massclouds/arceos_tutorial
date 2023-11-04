@@ -14,3 +14,4 @@ crate_interface = { path = "../crate_interface" }
 axalloc = { path = "../axalloc" }
 axsync = { path = "../axsync" }
 page_table = { path = "../page_table" }
+axtask = { path = "../axtask" }
