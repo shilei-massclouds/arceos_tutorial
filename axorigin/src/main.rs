@@ -12,7 +12,7 @@ pub fn main() {
 
     try_alloc_bulk();
 
-    axtask::init_scheduler();
+    axtask::init_sched();
 
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());

@@ -44,3 +44,10 @@ pub mod context {
     }
 }
 pub use context::{TaskContext};
+
+pub mod cpu {
+    pub fn current_task_ptr<T>() -> *const T {
+        unimplemented!()
+    }
+    pub unsafe fn set_current_task_ptr<T>(_ptr: *const T) {}
+}

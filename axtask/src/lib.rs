@@ -5,4 +5,9 @@ extern crate log;
 extern crate alloc;
 
 mod task;
-pub use task::init_scheduler;
+
+pub use task::AxTaskRef;
+
+pub fn init_sched() {
+    task::init();
+}

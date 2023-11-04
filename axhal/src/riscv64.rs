@@ -8,6 +8,7 @@ pub mod console;
 pub mod time;
 pub mod misc;
 pub mod mem;
+pub mod cpu;
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {
