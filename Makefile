@@ -60,7 +60,7 @@ $(OUT_ELF): FORCE
 		--target $(TARGET) --target-dir $(CURDIR)/target $(FEATURES)
 
 test:
-	cargo test --workspace --exclude "axorigin" -- --nocapture
+	cargo test --workspace --exclude "axorigin" --exclude "kernel_guard" -- --nocapture
 
 clean:
 	@rm -rf ./target

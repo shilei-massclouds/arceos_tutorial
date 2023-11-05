@@ -34,6 +34,7 @@ impl WaitQueue {
 
     fn cancel_events(&self, curr: CurrentTask) {
         if curr.in_wait_queue() {
+            let _guard = kernel_guard::IrqSave::new();
             self.queue.lock().retain(|t| !curr.ptr_eq(t));
             curr.set_in_wait_queue(false);
         }

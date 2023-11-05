@@ -9,7 +9,7 @@ axconfig =  { path = "../axconfig" }
 axlog = { path = "../axlog" }
 axsync = { path = "../axsync" }
 page_table =  { path = "../page_table" }
-#kernel_guard = { path = "../kernel_guard" }
+kernel_guard = { path = "../kernel_guard" }
 crate_interface = { path = "../crate_interface" }
 handler_table = { path = "../handler_table" }
 

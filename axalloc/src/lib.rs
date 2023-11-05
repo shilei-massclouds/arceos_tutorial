@@ -4,7 +4,7 @@ use core::ptr::NonNull;
 use core::alloc::{GlobalAlloc, Layout};
 use allocator::{BaseAllocator, ByteAllocator, PageAllocator};
 use allocator::{EarlyAllocator, BitmapPageAllocator, BuddyByteAllocator};
-use spinlock::SpinRaw;
+use spinlock::SpinNoIrq;
 
 #[macro_use]
 extern crate log;
@@ -14,17 +14,17 @@ const PAGE_SIZE: usize = 4096;
 const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
 
 struct GlobalAllocator {
-    early_alloc: SpinRaw<EarlyAllocator>,
-    byte_alloc: SpinRaw<BuddyByteAllocator>,
-    page_alloc: SpinRaw<BitmapPageAllocator>
+    early_alloc: SpinNoIrq<EarlyAllocator>,
+    byte_alloc: SpinNoIrq<BuddyByteAllocator>,
+    page_alloc: SpinNoIrq<BitmapPageAllocator>
 }
 
 impl GlobalAllocator {
     pub const fn new() -> Self {
         Self {
-            early_alloc: SpinRaw::new(EarlyAllocator::new()),
-            byte_alloc: SpinRaw::new(BuddyByteAllocator::new()),
-            page_alloc: SpinRaw::new(BitmapPageAllocator::new()),
+            early_alloc: SpinNoIrq::new(EarlyAllocator::new()),
+            byte_alloc: SpinNoIrq::new(BuddyByteAllocator::new()),
+            page_alloc: SpinNoIrq::new(BitmapPageAllocator::new()),
         }
     }
 

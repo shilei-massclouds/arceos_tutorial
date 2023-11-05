@@ -11,3 +11,4 @@ axhal = { path = "../axhal" }
 axconfig = { path = "../axconfig" }
 axsync = { path = "../axsync" }
 spinlock = { path = "../spinlock" }
+kernel_guard = { path = "../kernel_guard" }
