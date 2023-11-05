@@ -51,3 +51,7 @@ pub mod cpu {
     }
     pub unsafe fn set_current_task_ptr<T>(_ptr: *const T) {}
 }
+
+pub mod irq {
+    pub fn enable_irqs() {}
+}

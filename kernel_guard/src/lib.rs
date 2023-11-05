@@ -49,22 +49,22 @@ impl BaseGuard for IrqSave {
 impl BaseGuard for NoPreempt {
     type State = ();
     fn acquire() -> Self::State {
-        //crate_interface::call_interface!(KernelGuardIf::disable_preempt);
+        crate_interface::call_interface!(KernelGuardIf::disable_preempt);
     }
     fn release(_state: Self::State) {
-        //crate_interface::call_interface!(KernelGuardIf::enable_preempt);
+        crate_interface::call_interface!(KernelGuardIf::enable_preempt);
     }
 }
 
 impl BaseGuard for NoPreemptIrqSave {
     type State = usize;
     fn acquire() -> Self::State {
-        //crate_interface::call_interface!(KernelGuardIf::disable_preempt);
+        crate_interface::call_interface!(KernelGuardIf::disable_preempt);
         arch::local_irq_save_and_disable()
     }
     fn release(state: Self::State) {
         arch::local_irq_restore(state);
-        //crate_interface::call_interface!(KernelGuardIf::enable_preempt);
+        crate_interface::call_interface!(KernelGuardIf::enable_preempt);
     }
 }
 

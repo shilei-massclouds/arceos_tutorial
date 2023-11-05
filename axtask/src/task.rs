@@ -1,12 +1,12 @@
 use core::ops::Deref;
-use core::mem::ManuallyDrop;
+use core::sync::atomic::{AtomicIsize, AtomicBool, AtomicI32, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use core::{alloc::Layout, cell::UnsafeCell, ptr::NonNull};
+use crate::WaitQueue;
+use core::mem::ManuallyDrop;
 use alloc::{boxed::Box, string::String, sync::Arc};
-use core::sync::atomic::{AtomicBool, AtomicU8, AtomicI32, AtomicU64, Ordering};
 use axconfig::{PAGE_SIZE, align_up};
 use axhal::TaskContext;
-use crate::WaitQueue;
-use crate::run_queue::AxRunQueue;
+use crate::run_queue::{AxRunQueue, RUN_QUEUE};
 
 pub type AxTaskRef = Arc<Task>;
 
@@ -31,10 +31,13 @@ pub struct Task {
     entry: Option<*mut dyn FnOnce()>,
     state: AtomicU8,
     in_wait_queue: AtomicBool,
+    need_resched: AtomicBool,
+    preempt_disable_count: AtomicUsize,
     exit_code: AtomicI32,
     wait_for_exit: WaitQueue,
     kstack: Option<TaskStack>,
     ctx: UnsafeCell<TaskContext>,
+    time_slice: AtomicIsize,
 }
 
 unsafe impl Send for Task {}
@@ -108,6 +111,8 @@ impl Task {
 }
 
 impl Task {
+    const MAX_TIME_SLICE: isize = 5;
+
     fn new_common(id: TaskId, name: String) -> Self {
         Self {
             id,
@@ -117,10 +122,13 @@ impl Task {
             entry: None,
             state: AtomicU8::new(TaskState::Ready as u8),
             in_wait_queue: AtomicBool::new(false),
+            need_resched: AtomicBool::new(false),
+            preempt_disable_count: AtomicUsize::new(0),
             exit_code: AtomicI32::new(0),
             wait_for_exit: WaitQueue::new(),
             kstack: None,
             ctx: UnsafeCell::new(TaskContext::new()),
+            time_slice: AtomicIsize::new(Self::MAX_TIME_SLICE),
         }
     }
 
@@ -187,6 +195,38 @@ impl Task {
         self.in_wait_queue.store(in_wait_queue, Ordering::Release);
     }
 
+    pub(crate) fn set_preempt_pending(&self, pending: bool) {
+        self.need_resched.store(pending, Ordering::Release)
+    }
+
+    #[inline]
+    pub(crate) fn can_preempt(&self, current_disable_count: usize) -> bool {
+        self.preempt_disable_count.load(Ordering::Acquire) == current_disable_count
+    }
+
+    #[inline]
+    pub(crate) fn disable_preempt(&self) {
+        self.preempt_disable_count.fetch_add(1, Ordering::Relaxed);
+    }
+
+    #[inline]
+    pub(crate) fn enable_preempt(&self, resched: bool) {
+        if self.preempt_disable_count.fetch_sub(1, Ordering::Relaxed) == 1 && resched {
+            // If current task is pending to be preempted, do rescheduling.
+            Self::current_check_preempt_pending();
+        }
+    }
+
+    fn current_check_preempt_pending() {
+        let curr = current();
+        if curr.need_resched.load(Ordering::Acquire) && curr.can_preempt(0) {
+            let mut rq = RUN_QUEUE.lock();
+            if curr.need_resched.load(Ordering::Acquire) {
+                rq.preempt_resched();
+            }
+        }
+    }
+
     pub(crate) fn notify_exit(&self, exit_code: i32, rq: &mut AxRunQueue) {
         self.exit_code.store(exit_code, Ordering::Release);
         self.wait_for_exit.notify_all_locked(false, rq);
@@ -195,6 +235,19 @@ impl Task {
     #[inline]
     pub(crate) const unsafe fn ctx_mut_ptr(&self) -> *mut TaskContext {
         self.ctx.get()
+    }
+
+    pub fn time_slice(&self) -> isize {
+        self.time_slice.load(Ordering::Acquire)
+    }
+
+    pub fn reset_time_slice(&self) {
+        self.time_slice.store(Self::MAX_TIME_SLICE, Ordering::Release);
+    }
+
+    pub fn task_tick(&self) -> bool {
+        let old_slice = self.time_slice.fetch_sub(1, Ordering::Release);
+        old_slice <= 1
     }
 }
 
@@ -210,6 +263,10 @@ impl CurrentTask {
 
     pub(crate) fn get() -> Self {
         Self::try_get().expect("current task is uninitialized")
+    }
+
+    pub fn as_task_ref(&self) -> &AxTaskRef {
+        &self.0
     }
 
     pub(crate) fn clone(&self) -> AxTaskRef {
@@ -241,6 +298,7 @@ impl Deref for CurrentTask {
 }
 
 extern "C" fn task_entry() -> ! {
+    axhal::irq::enable_irqs();
     let task = current();
     if let Some(entry) = task.entry {
         unsafe { Box::from_raw(entry)() };

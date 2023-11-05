@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-crate_interface = "0.1"
+log = "0.4"
+crate_interface = { path = "../crate_interface" }

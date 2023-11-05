@@ -55,4 +55,12 @@ impl WaitQueue {
             false
         }
     }
+
+    pub fn wait(&self) {
+        RUN_QUEUE.lock().block_current(|task| {
+            task.set_in_wait_queue(true);
+            self.queue.lock().push_back(task)
+        });
+        self.cancel_events(current());
+    }
 }
