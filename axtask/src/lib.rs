@@ -12,7 +12,7 @@ mod wait_queue;
 
 use crate::task::CurrentTask;
 
-pub use task::AxTaskRef;
+pub use task::{AxTaskRef, current};
 pub use wait_queue::WaitQueue;
 
 pub fn init_sched() {

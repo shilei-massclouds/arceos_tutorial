@@ -2,6 +2,7 @@
 #![no_main]
 
 use axstd::{println, String, time, Vec, thread};
+use axstd::sync::Mutex;
 
 #[no_mangle]
 pub fn main() {
@@ -15,6 +16,8 @@ pub fn main() {
     try_multitask();
 
     raise_break_exception();
+
+    test_mutex();
 
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());
@@ -46,4 +49,33 @@ fn raise_break_exception() {
         core::arch::asm!("nop");
         core::arch::asm!("nop");
     }
+}
+
+fn test_mutex() {
+    extern crate alloc;
+    use alloc::sync::Arc;
+    let flag = Arc::new(Mutex::new(0));
+    let flag2 = flag.clone();
+
+    thread::spawn(move || {
+        println!("Spawned-thread starts ...");
+        let mut lock = flag2.lock();
+        *lock += 1;
+        println!("Spawned-thread starts ok! {}", *lock);
+    });
+
+    {
+        println!("Main thread set FLAG to notify spawned-thread to continue.");
+        let mut lock = flag.lock();
+        *lock += 1;
+    }
+
+    println!("Main thread waits spawned-thread to respond ...");
+    loop {
+        let lock = flag.lock();
+        if *lock >= 2 {
+            break;
+        }
+    }
+    println!("Mutex test run OK!");
 }
