@@ -4,9 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+log = "0.4"
 axconfig =  { path = "../axconfig" }
 axlog = { path = "../axlog" }
+axsync = { path = "../axsync" }
 page_table =  { path = "../page_table" }
+#kernel_guard = { path = "../kernel_guard" }
+crate_interface = { path = "../crate_interface" }
+handler_table = { path = "../handler_table" }
 
 [target.'cfg(target_arch = "riscv64")'.dependencies]
 sbi-rt = { version = "0.0.2", features = ["legacy"] }

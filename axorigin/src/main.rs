@@ -14,6 +14,8 @@ pub fn main() {
 
     try_multitask();
 
+    raise_break_exception();
+
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());
 }
@@ -35,5 +37,13 @@ fn try_multitask() {
     });
 
     let result = computation.join().unwrap();
-    println!("Task gets result: {result}");
+    println!("Task gets result: {result}\n");
+}
+
+fn raise_break_exception() {
+    unsafe {
+        core::arch::asm!("ebreak");
+        core::arch::asm!("nop");
+        core::arch::asm!("nop");
+    }
 }
