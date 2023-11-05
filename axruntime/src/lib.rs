@@ -2,6 +2,7 @@
 
 #[cfg(all(target_os = "none", not(test)))]
 mod lang_items;
+mod trap;
 
 #[allow(unused_imports)]
 #[macro_use]
