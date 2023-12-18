@@ -7,5 +7,7 @@ mod boot;
 mod console;
 
 unsafe extern "C" fn rust_entry(_hartid: usize, _dtb: usize) {
-    console::write_bytes(b"\nHello, ArceOS!\n");
+    let version = 1;
+    ax_println!("\nHello, ArceOS!");
+    ax_println!("version: [{}]", version);
 }
