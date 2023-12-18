@@ -4,10 +4,8 @@
 
 mod lang_items;
 mod boot;
+mod console;
 
 unsafe extern "C" fn rust_entry(_hartid: usize, _dtb: usize) {
-    core::arch::asm!(
-        "wfi",
-        options(noreturn)
-    )
+    console::write_bytes(b"\nHello, ArceOS!\n");
 }
