@@ -1,12 +1,10 @@
 #![no_std]
 #![no_main]
-#![feature(asm_const)]
 
-mod lang_items;
-mod boot;
-mod console;
+use axhal::ax_println;
 
-unsafe extern "C" fn rust_entry(_hartid: usize, _dtb: usize) {
+#[no_mangle]
+pub fn main(_hartid: usize, _dtb: usize) {
     let version = 1;
     ax_println!("\nHello, ArceOS!");
     ax_println!("version: [{}]", version);
