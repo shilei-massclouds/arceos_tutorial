@@ -4,7 +4,9 @@ resolver = "2"
 members = [
     "axorigin",
     "axhal",
-    "axconfig", "spinlock",
+    "axconfig",
+    "spinlock",
+    "axsync"
 ]
 
 [profile.release]
