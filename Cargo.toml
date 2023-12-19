@@ -4,6 +4,7 @@ resolver = "2"
 members = [
     "axorigin",
     "axhal",
+    "axconfig",
 ]
 
 [profile.release]
