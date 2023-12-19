@@ -28,8 +28,10 @@ OUT_DIR ?= target/$(TARGET)/release
 OUT_ELF := $(OUT_DIR)/$(APP_NAME)
 OUT_BIN := $(OUT_DIR)/$(APP_NAME).bin
 
+ifeq ($(filter $(MAKECMDGOALS),test),)	# not run `cargo test`
 RUSTFLAGS := -C link-arg=-T$(LD_SCRIPT) -C link-arg=-no-pie
 export RUSTFLAGS
+endif
 
 all: build
 
@@ -58,7 +60,10 @@ clean:
 	@rm -rf ./target
 	@rm -f ./qemu.log
 
+test:
+	cargo test --workspace --exclude "axorigin" -- --nocapture
+
 FORCE:
 	@:
 
-.PHONY: all build disasm run justrun debug clippy fmt test test_no_fail_fast clean FORCE
+.PHONY: all build disasm run justrun test clean FORCE
