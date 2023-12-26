@@ -1,3 +1,5 @@
+#![no_std]
+
 use axconfig::{PAGE_SHIFT, ASPACE_BITS};
 
 /*
