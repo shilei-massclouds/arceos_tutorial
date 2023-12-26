@@ -6,7 +6,8 @@ members = [
     "axhal",
     "axconfig",
     "spinlock",
-    "axsync"
+    "axsync",
+    "page_table",
 ]
 
 [profile.release]
