@@ -7,7 +7,7 @@ members = [
     "axconfig",
     "spinlock",
     "axsync",
-    "page_table",
+    "page_table", "axalloc",
 ]
 
 [profile.release]
