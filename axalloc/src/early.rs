@@ -14,16 +14,23 @@ pub struct EarlyAllocator {
 }
 
 impl EarlyAllocator {
-    fn init(&mut self, start: usize, size: usize) {
+    pub fn init(&mut self, start: usize, size: usize) {
         self.start = start;
         self.end = start + size;
         self.byte_pos = start;
         self.page_pos = self.end;
     }
+
+    pub const fn uninit_new() -> Self {
+        Self {
+            start: 0, end: 0, count: 0,
+            byte_pos: 0, page_pos: 0,
+        }
+    }
 }
 
 impl EarlyAllocator {
-	fn alloc_bytes(&mut self, layout: Layout) -> AllocResult<NonNull<u8>> {
+	pub fn alloc_bytes(&mut self, layout: Layout) -> AllocResult<NonNull<u8>> {
         let start = align_up(self.byte_pos, layout.align());
         let next = start + layout.size();
         if next > self.page_pos {
@@ -35,7 +42,7 @@ impl EarlyAllocator {
         }
     }
 
-    fn dealloc_bytes(&mut self, _ptr: NonNull<u8>, _layout: Layout) {
+    pub fn dealloc_bytes(&mut self, _ptr: NonNull<u8>, _layout: Layout) {
         self.count -= 1;
         if self.count == 0 {
             self.byte_pos = self.start;
@@ -54,7 +61,7 @@ impl EarlyAllocator {
 }
 
 impl EarlyAllocator {
-	fn alloc_pages(&mut self, layout: Layout) -> AllocResult<NonNull<u8>> {
+	pub fn alloc_pages(&mut self, layout: Layout) -> AllocResult<NonNull<u8>> {
         assert_eq!(layout.size() % PAGE_SIZE, 0);
         let next = align_down(self.page_pos - layout.size(), layout.align());
         if next <= self.byte_pos {
@@ -65,13 +72,13 @@ impl EarlyAllocator {
         }
     }
 
-    fn total_pages(&self) -> usize {
+    pub fn total_pages(&self) -> usize {
         (self.end - self.start) / PAGE_SIZE
     }
     pub fn used_pages(&self) -> usize {
         (self.end - self.page_pos) / PAGE_SIZE
     }
-    fn available_pages(&self) -> usize {
+    pub fn available_pages(&self) -> usize {
         (self.page_pos - self.byte_pos) / PAGE_SIZE
     }
 }
