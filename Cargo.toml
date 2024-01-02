@@ -9,6 +9,8 @@ members = [
     "axsync",
     "page_table",
     "axalloc",
+    "axruntime",
+    "axstd",
 ]
 
 [profile.release]

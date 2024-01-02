@@ -61,7 +61,7 @@ clean:
 	@rm -f ./qemu.log
 
 test:
-	cargo test --workspace --exclude "axorigin" -- --nocapture
+	cargo test --workspace --exclude "axorigin" --exclude "axruntime" --exclude "axstd" -- --nocapture
 
 FORCE:
 	@:

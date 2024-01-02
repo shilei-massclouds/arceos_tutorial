@@ -3,9 +3,9 @@ mod boot;
 pub mod console;
 mod paging;
 
-unsafe extern "C" fn rust_entry(_hartid: usize, _dtb: usize) {
+unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {
-        fn main(hartid: usize, dtb: usize);
+        fn rust_main(hartid: usize, dtb: usize);
     }
-    main(_hartid, _dtb);
+    rust_main(hartid, dtb);
 }
