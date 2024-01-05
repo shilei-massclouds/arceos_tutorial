@@ -16,6 +16,8 @@ pub extern "C" fn rust_main(_hartid: usize, _dtb: usize) -> ! {
     // requisition the higher part(1M) for early heap.
     axalloc::early_init(_skernel as usize - 0x100000, 0x100000);
 
+    axlog::init();
+
     unsafe { main(); }
     panic!("ArceOS exit ...");
 }

@@ -1,11 +1,9 @@
 [package]
-name = "axruntime"
+name = "axlog"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-axhal = { path = "../axhal" }
-axalloc = { path = "../axalloc" }
-axlog = { path = "../axlog" }
+crate_interface = "0.1.1"
