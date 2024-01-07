@@ -2,8 +2,11 @@
 
 pub use axhal::ax_println as println;
 
+#[macro_use]
+extern crate axlog;
+
 #[no_mangle]
-pub extern "C" fn rust_main(_hartid: usize, _dtb: usize) -> ! {
+pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     extern "C" {
         fn _skernel();
         fn main();
@@ -17,6 +20,9 @@ pub extern "C" fn rust_main(_hartid: usize, _dtb: usize) -> ! {
     axalloc::early_init(_skernel as usize - 0x100000, 0x100000);
 
     axlog::init();
+    axlog::set_max_level(option_env!("LOG").unwrap_or("")); // no effect if set `log-level-*` features
+    info!("Logging is enabled.");
+    info!("Primary CPU {} started, dtb = {:#x}.", hartid, dtb);
 
     unsafe { main(); }
     panic!("ArceOS exit ...");

@@ -3,6 +3,7 @@ mod boot;
 pub mod console;
 mod paging;
 pub mod time;
+mod misc;
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {
