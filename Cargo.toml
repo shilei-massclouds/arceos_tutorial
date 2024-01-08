@@ -12,6 +12,7 @@ members = [
     "axruntime",
     "axstd",
     "axlog",
+    "axdtb",
 ]
 
 [profile.release]
