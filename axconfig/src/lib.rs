@@ -16,3 +16,8 @@ pub const fn align_up(val: usize, align: usize) -> usize {
 pub const fn align_down(val: usize, align: usize) -> usize {
     (val) & !(align - 1)
 }
+
+#[inline]
+pub const fn phys_to_virt(pa: usize) -> usize {
+    pa + PHYS_VIRT_OFFSET
+}

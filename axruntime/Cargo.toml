@@ -9,3 +9,5 @@ edition = "2021"
 axhal = { path = "../axhal" }
 axalloc = { path = "../axalloc" }
 axlog = { path = "../axlog" }
+axdtb = { path = "../axdtb" }
+axconfig = { path = "../axconfig" }
