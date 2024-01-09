@@ -4,6 +4,7 @@ pub mod console;
 mod paging;
 pub mod time;
 mod misc;
+pub use misc::terminate;
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {

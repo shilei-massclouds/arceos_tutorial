@@ -44,7 +44,7 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     }
 
     unsafe { main(); }
-    panic!("ArceOS exit ...");
+    axhal::terminate();
 }
 
 struct DtbInfo {
