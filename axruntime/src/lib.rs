@@ -10,7 +10,7 @@ use core::str;
 use alloc::string::String;
 use alloc::vec::Vec;
 use axdtb::SliceRead;
-use axconfig::phys_to_virt;
+use axconfig::{phys_to_virt, SIZE_2M};
 
 #[no_mangle]
 pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
@@ -42,6 +42,9 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     for r in &dtb_info.mmio_regions {
         info!("\t{:#x}, size: {:#x}", r.0, r.1);
     }
+
+    info!("Initialize kernel page table...");
+    remap_kernel_memory(dtb_info);
 
     unsafe { main(); }
     axhal::terminate();
@@ -107,4 +110,38 @@ fn parse_dtb(dtb_pa: usize) -> axdtb::DeviceTreeResult<DtbInfo> {
         memory_size,
         mmio_regions,
     })
+}
+
+fn remap_kernel_memory(dtb: DtbInfo) {
+    use axhal::mem::{MemRegion, kernel_image_regions, free_regions};
+    use axsync::BootOnceCell;
+    use page_table::{PAGE_KERNEL_RW, PageTable};
+
+    let mmio_regions = dtb.mmio_regions.iter().map(|reg| MemRegion {
+        paddr: reg.0.into(),
+        size: reg.1,
+        flags: PAGE_KERNEL_RW,
+        name: "mmio",
+    });
+
+    let regions = kernel_image_regions()
+        .chain(free_regions(dtb.memory_size))
+        .chain(mmio_regions);
+
+    let mut kernel_page_table = PageTable::alloc_table(0);
+    for r in regions {
+        let _ = kernel_page_table.map(
+            phys_to_virt(r.paddr),
+            r.paddr,
+            r.size,
+            SIZE_2M,
+            r.flags,
+        );
+    }
+
+    static KERNEL_PAGE_TABLE: BootOnceCell<PageTable> = BootOnceCell::new();
+    KERNEL_PAGE_TABLE.init(kernel_page_table);
+    unsafe {
+        axhal::write_page_table_root(KERNEL_PAGE_TABLE.get().root_paddr())
+    };
 }

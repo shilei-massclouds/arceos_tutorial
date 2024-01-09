@@ -28,6 +28,7 @@ pub const PAGE_KERNEL_RO: usize =
     _PAGE_V | _PAGE_R | _PAGE_G | _PAGE_A | _PAGE_D;
 
 pub const PAGE_KERNEL_RW: usize = PAGE_KERNEL_RO | _PAGE_W;
+pub const PAGE_KERNEL_RX: usize = PAGE_KERNEL_RO | _PAGE_E;
 pub const PAGE_KERNEL_RWX: usize = PAGE_KERNEL_RW | _PAGE_E;
 
 const PAGE_PFN_SHIFT: usize = 10;

@@ -13,7 +13,10 @@ pub unsafe fn init_boot_page_table() {
 }
 
 pub unsafe fn init_mmu() {
-    let page_table_root = boot_page_table as usize;
-    satp::set(satp::Mode::Sv39, 0, phys_pfn(page_table_root));
+    write_page_table_root(boot_page_table as usize);
+}
+
+pub unsafe fn write_page_table_root(pa: usize) {
+    satp::set(satp::Mode::Sv39, 0, phys_pfn(pa));
     riscv::asm::sfence_vma_all();
 }
