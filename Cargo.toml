@@ -13,6 +13,7 @@ members = [
     "axstd",
     "axlog",
     "axdtb",
+    "bitmap_allocator",
 ]
 
 [profile.release]
