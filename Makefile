@@ -3,6 +3,7 @@ ARCH ?= riscv64
 TARGET := riscv64gc-unknown-none-elf
 SMP ?= 1
 FEATURES ?=
+LOG ?= warn
 
 # Utility definitions and functions
 GREEN_C := \033[92;1m
@@ -32,6 +33,7 @@ ifeq ($(filter $(MAKECMDGOALS),test),)	# not run `cargo test`
 RUSTFLAGS := -C link-arg=-T$(LD_SCRIPT) -C link-arg=-no-pie
 export RUSTFLAGS
 endif
+export LOG
 
 all: build
 

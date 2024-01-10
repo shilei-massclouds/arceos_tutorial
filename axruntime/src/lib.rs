@@ -11,6 +11,10 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use axdtb::SliceRead;
 use axconfig::{phys_to_virt, SIZE_2M};
+use axhal::mem::{MemRegion, kernel_image_regions, free_regions};
+use axsync::BootOnceCell;
+use page_table::{PAGE_KERNEL_RW, PageTable};
+
 
 #[no_mangle]
 pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
@@ -42,9 +46,15 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
     for r in &dtb_info.mmio_regions {
         info!("\t{:#x}, size: {:#x}", r.0, r.1);
     }
+    let phys_memory_size = dtb_info.memory_size;
 
     info!("Initialize kernel page table...");
     remap_kernel_memory(dtb_info);
+
+    info!("Initialize formal allocators ...");
+    for r in free_regions(phys_memory_size) {
+        axalloc::final_init(phys_to_virt(r.paddr), r.size);
+    }
 
     unsafe { main(); }
     axhal::terminate();
@@ -113,10 +123,6 @@ fn parse_dtb(dtb_pa: usize) -> axdtb::DeviceTreeResult<DtbInfo> {
 }
 
 fn remap_kernel_memory(dtb: DtbInfo) {
-    use axhal::mem::{MemRegion, kernel_image_regions, free_regions};
-    use axsync::BootOnceCell;
-    use page_table::{PAGE_KERNEL_RW, PageTable};
-
     let mmio_regions = dtb.mmio_regions.iter().map(|reg| MemRegion {
         paddr: reg.0.into(),
         size: reg.1,

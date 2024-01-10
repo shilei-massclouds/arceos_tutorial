@@ -6,3 +6,5 @@ pub use axruntime::println;
 
 pub mod time;
 pub use time::*;
+
+pub use axconfig::PAGE_SIZE;

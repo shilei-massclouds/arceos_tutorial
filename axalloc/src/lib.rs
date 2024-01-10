@@ -4,12 +4,16 @@ use core::alloc::Layout;
 use core::ptr::NonNull;
 use spinlock::SpinRaw;
 use axconfig::PAGE_SIZE;
+use axsync::BootOnceCell;
 
 extern crate alloc;
 use alloc::alloc::GlobalAlloc;
 
 mod early;
 use early::EarlyAllocator;
+
+mod bitmap;
+use bitmap::BitmapPageAllocator;
 
 #[derive(Debug)]
 pub enum AllocError {
@@ -26,17 +30,25 @@ static GLOBAL_ALLOCATOR: GlobalAllocator = GlobalAllocator::new();
 
 struct GlobalAllocator {
     early_alloc: SpinRaw<EarlyAllocator>,
+    page_alloc: SpinRaw<BitmapPageAllocator>,
+    finalized: BootOnceCell<bool>,
 }
 
 impl GlobalAllocator {
     pub const fn new() -> Self {
         Self {
             early_alloc: SpinRaw::new(EarlyAllocator::uninit_new()),
+            page_alloc: SpinRaw::new(BitmapPageAllocator::new()),
+            finalized: BootOnceCell::new(),
         }
     }
 
     pub fn early_init(&self, start: usize, size: usize) {
         self.early_alloc.lock().init(start, size)
+    }
+    pub fn final_init(&self, start: usize, size: usize) {
+        self.page_alloc.lock().init(start, size);
+        self.finalized.init(true);
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
@@ -53,14 +65,24 @@ impl GlobalAllocator {
         )
     }
 	fn alloc_pages(&self, layout: Layout) -> *mut u8 {
-        if let Ok(ptr) = self.early_alloc.lock().alloc_pages(layout) {
+        let ret = if self.finalized.is_init() {
+            self.page_alloc.lock().alloc_pages(layout)
+        } else {
+            self.early_alloc.lock().alloc_pages(layout)
+        };
+
+        if let Ok(ptr) = ret {
             ptr.as_ptr()
         } else {
             alloc::alloc::handle_alloc_error(layout)
         }
     }
-    fn dealloc_pages(&self, _ptr: *mut u8, _layout: Layout) {
-        unimplemented!();
+    fn dealloc_pages(&self, ptr: *mut u8, layout: Layout) {
+        if self.finalized.is_init() {
+            self.page_alloc.lock().dealloc_pages(ptr as usize, layout.size()/PAGE_SIZE)
+        } else {
+            unimplemented!()
+        };
     }
 }
 
@@ -84,4 +106,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
 pub fn early_init(start: usize, len: usize) {
     GLOBAL_ALLOCATOR.early_init(start, len)
+}
+pub fn final_init(start: usize, len: usize) {
+    GLOBAL_ALLOCATOR.final_init(start, len)
 }
