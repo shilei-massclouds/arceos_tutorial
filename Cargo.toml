@@ -15,6 +15,7 @@ members = [
     "axdtb",
     "bitmap_allocator",
     "linked_list",
+    "buddy_allocator",
 ]
 
 [profile.release]
