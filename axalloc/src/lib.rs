@@ -15,6 +15,10 @@ use early::EarlyAllocator;
 mod bitmap;
 use bitmap::BitmapPageAllocator;
 
+mod buddy;
+use buddy::BuddyByteAllocator;
+const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
+
 #[derive(Debug)]
 pub enum AllocError {
     InvalidParam,
@@ -31,6 +35,7 @@ static GLOBAL_ALLOCATOR: GlobalAllocator = GlobalAllocator::new();
 struct GlobalAllocator {
     early_alloc: SpinRaw<EarlyAllocator>,
     page_alloc: SpinRaw<BitmapPageAllocator>,
+    byte_alloc: SpinRaw<BuddyByteAllocator>,
     finalized: BootOnceCell<bool>,
 }
 
@@ -39,6 +44,7 @@ impl GlobalAllocator {
         Self {
             early_alloc: SpinRaw::new(EarlyAllocator::uninit_new()),
             page_alloc: SpinRaw::new(BitmapPageAllocator::new()),
+            byte_alloc: SpinRaw::new(BuddyByteAllocator::new()),
             finalized: BootOnceCell::new(),
         }
     }
@@ -48,21 +54,37 @@ impl GlobalAllocator {
     }
     pub fn final_init(&self, start: usize, size: usize) {
         self.page_alloc.lock().init(start, size);
+        let layout = Layout::from_size_align(MIN_HEAP_SIZE, PAGE_SIZE).unwrap();
+        let heap_ptr = self.alloc_pages(layout) as usize;
+        self.byte_alloc.lock().init(heap_ptr, MIN_HEAP_SIZE);
         self.finalized.init(true);
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
-        if let Ok(ptr) = self.early_alloc.lock().alloc_bytes(layout) {
+        let ret = if self.finalized.is_init() {
+            self.byte_alloc.lock().alloc_bytes(layout)
+        } else {
+            self.early_alloc.lock().alloc_bytes(layout)
+        };
+
+        if let Ok(ptr) = ret {
             ptr.as_ptr()
         } else {
             alloc::alloc::handle_alloc_error(layout)
         }
     }
     fn dealloc_bytes(&self, ptr: *mut u8, layout: Layout) {
-        self.early_alloc.lock().dealloc_bytes(
-            NonNull::new(ptr).expect("dealloc null ptr"),
-            layout
-        )
+        if self.finalized.is_init() {
+            self.byte_alloc.lock().dealloc_bytes(
+                NonNull::new(ptr).expect("dealloc null ptr"),
+                layout
+            )
+        } else {
+            self.early_alloc.lock().dealloc_bytes(
+                NonNull::new(ptr).expect("dealloc null ptr"),
+                layout
+            )
+        }
     }
 	fn alloc_pages(&self, layout: Layout) -> *mut u8 {
         let ret = if self.finalized.is_init() {

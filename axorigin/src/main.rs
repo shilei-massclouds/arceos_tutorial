@@ -12,6 +12,7 @@ pub fn main(_hartid: usize, _dtb: usize) {
     println!("Hello, ArceOS![{}]", s);
 
     try_alloc_pages();
+    try_alloc_long_string();
 
     let d = now.elapsed();
     println!("Elapsed: {}.{:06}", d.as_secs(), d.subsec_micros());
@@ -27,4 +28,16 @@ fn try_alloc_pages() {
     println!("Allocate pages: [{:?}].", p);
     unsafe { alloc::alloc::dealloc(p, layout) };
     println!("Release pages ok!");
+}
+
+fn try_alloc_long_string() {
+    use core::alloc::Layout;
+    extern crate alloc;
+
+    const LENGTH: usize = 0x1000;
+    let layout = Layout::from_size_align(LENGTH, 1).unwrap();
+    let p = unsafe { alloc::alloc::alloc(layout) };
+    println!("Allocate long string: [{:?}].", p);
+    unsafe { alloc::alloc::dealloc(p, layout) };
+    println!("Release long string ok!");
 }
