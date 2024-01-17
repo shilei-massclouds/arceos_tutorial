@@ -24,6 +24,9 @@ impl<const ORDER: usize> Heap<ORDER> {
     pub const fn empty() -> Self {
         Self::new()
     }
+    pub fn stats_total_bytes(&self) -> usize {
+        self.total
+    }
 }
 
 impl<const ORDER: usize> Heap<ORDER> {

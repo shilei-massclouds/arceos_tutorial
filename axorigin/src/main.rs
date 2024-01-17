@@ -34,7 +34,7 @@ fn try_alloc_long_string() {
     use core::alloc::Layout;
     extern crate alloc;
 
-    const LENGTH: usize = 0x1000;
+    const LENGTH: usize = 0x200000;
     let layout = Layout::from_size_align(LENGTH, 1).unwrap();
     let p = unsafe { alloc::alloc::alloc(layout) };
     println!("Allocate long string: [{:?}].", p);

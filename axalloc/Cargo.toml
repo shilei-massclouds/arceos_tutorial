@@ -11,3 +11,4 @@ axsync = { path = "../axsync" }
 spinlock = { path = "../spinlock" }
 bitmap_allocator = { path = "../bitmap_allocator" }
 buddy_allocator = { path = "../buddy_allocator" }
+log = "0.4"

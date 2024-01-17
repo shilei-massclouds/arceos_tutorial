@@ -12,6 +12,13 @@ impl BuddyByteAllocator {
             inner: Heap::<32>::new(),
         }
     }
+    pub fn add_memory(&mut self, start: usize, size: usize) -> AllocResult {
+        unsafe { self.inner.add_to_heap(start, start + size) };
+        Ok(())
+    }
+    pub fn total_bytes(&self) -> usize {
+        self.inner.stats_total_bytes()
+    }
 }
 
 impl BuddyByteAllocator {

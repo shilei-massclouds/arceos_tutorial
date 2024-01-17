@@ -19,6 +19,8 @@ mod buddy;
 use buddy::BuddyByteAllocator;
 const MIN_HEAP_SIZE: usize = 0x8000; // 32 K
 
+use log::info;
+
 #[derive(Debug)]
 pub enum AllocError {
     InvalidParam,
@@ -61,16 +63,29 @@ impl GlobalAllocator {
     }
 
     fn alloc_bytes(&self, layout: Layout) -> *mut u8 {
-        let ret = if self.finalized.is_init() {
-            self.byte_alloc.lock().alloc_bytes(layout)
-        } else {
-            self.early_alloc.lock().alloc_bytes(layout)
-        };
+        if !self.finalized.is_init() {
+            return self.early_alloc.lock().alloc_bytes(layout).unwrap().as_ptr();
+        }
 
-        if let Ok(ptr) = ret {
-            ptr.as_ptr()
-        } else {
-            alloc::alloc::handle_alloc_error(layout)
+        loop {
+            let mut balloc = self.byte_alloc.lock();
+            if let Ok(ptr) = balloc.alloc_bytes(layout) {
+                return ptr.as_ptr();
+            } else {
+                let old_size = balloc.total_bytes();
+                let expand_size = old_size
+                    .max(layout.size())
+                    .next_power_of_two()
+                    .max(PAGE_SIZE);
+                let layout = Layout::from_size_align(expand_size, PAGE_SIZE).unwrap();
+                let heap_ptr = self.alloc_pages(layout) as usize;
+                info!(
+                    "expand heap memory: [{:#x}, {:#x})",
+                    heap_ptr,
+                    heap_ptr + expand_size
+                );
+                let _ = balloc.add_memory(heap_ptr, expand_size);
+            }
         }
     }
     fn dealloc_bytes(&self, ptr: *mut u8, layout: Layout) {
