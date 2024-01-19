@@ -7,6 +7,8 @@ pub mod time;
 mod misc;
 pub use misc::terminate;
 pub mod mem;
+mod context;
+pub use context::{TaskContext};
 
 unsafe extern "C" fn rust_entry(hartid: usize, dtb: usize) {
     extern "C" {

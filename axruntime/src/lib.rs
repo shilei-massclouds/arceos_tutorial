@@ -56,6 +56,9 @@ pub extern "C" fn rust_main(hartid: usize, dtb: usize) -> ! {
         axalloc::final_init(phys_to_virt(r.paddr), r.size);
     }
 
+    info!("Initialize multitask ...");
+    axtask::init_sched();
+
     unsafe { main(); }
     axhal::terminate();
 }

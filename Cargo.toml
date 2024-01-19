@@ -13,6 +13,7 @@ members = [
     "axstd",
     "axlog",
     "axdtb",
+    "axtask",
     "bitmap_allocator",
     "linked_list",
     "buddy_allocator",
