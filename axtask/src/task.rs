@@ -3,7 +3,7 @@ use axhal::TaskContext;
 static mut CUR_CTX: TaskContext = TaskContext::new();
 static mut NEXT_CTX: TaskContext = TaskContext::new();
 
-pub fn init_sched() {
+pub fn init() {
     let layout = core::alloc::Layout::from_size_align(axconfig::PAGE_SIZE, 16).unwrap();
     let kstack = unsafe { alloc::alloc::alloc(layout) };
     let kstack_top = kstack as usize + 4096;
